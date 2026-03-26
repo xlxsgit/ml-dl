@@ -71,7 +71,10 @@ def extract_tex_body(tex_file):
             content = f.read()
             match = CONTENT_PATTERN.search(content)
             if match:
-                return match.group(1).strip()
+                body = match.group(1).strip()
+                # 清理不适合 book 合集的命令
+                body = body.replace(r'\maketitle', '')
+                return body
     except Exception as e:
         print(f"提取 {tex_file.name} 内容失败: {e}")
     return ""
@@ -89,12 +92,42 @@ def generate_and_compile_book(category, tex_files):
     # 构建 Book 源码
     book_content = [
         r"\documentclass[12pt, a4paper]{book}",
+        r"\usepackage[margin=2.5cm]{geometry}",
         r"\usepackage{ctex}",
         r"\usepackage{amsmath, amssymb}",
+        r"\usepackage{graphicx}",
+        r"\usepackage{tabularx}",
+        r"\usepackage{xcolor}",
         r"\usepackage{listings}",
-        r"\usepackage{geometry}",
         r"\usepackage{hyperref}",
-        r"\geometry{margin=2.5cm}",
+        r"\usepackage{tikz}",
+        r"\usetikzlibrary{shapes, arrows.meta, positioning, calc}",
+        "",
+        r"% listings 代码高亮配置",
+        r"\lstset{",
+        r"    language=Python,",
+        r"    basicstyle=\ttfamily\small,",
+        r"    keywordstyle=\color{blue},",
+        r"    commentstyle=\color{green!50!black},",
+        r"    stringstyle=\color{red},",
+        r"    showstringspaces=false,",
+        r"    breaklines=true,",
+        r"    numbers=left,",
+        r"    numberstyle=\tiny\color{gray},",
+        r"    frame=single",
+        r"}",
+        "",
+        r"% TikZ 样式定义（用于 Transformer 等架构图）",
+        r"\tikzset{",
+        r"    layer/.style={rectangle, draw, thick, minimum width=3cm, minimum height=0.8cm, align=center, rounded corners=2pt},",
+        r"    attn/.style={layer, fill=blue!10},",
+        r"    ffn/.style={layer, fill=orange!10},",
+        r"    norm/.style={layer, fill=green!10},",
+        r"    emb/.style={layer, fill=gray!20},",
+        r"    pos/.style={circle, draw, thick, inner sep=2pt, fill=yellow!20},",
+        r"    arrow/.style={-Stealth, thick}",
+        r"}",
+        "",
         r"\begin{document}",
         r"\tableofcontents",
         r"\newpage"

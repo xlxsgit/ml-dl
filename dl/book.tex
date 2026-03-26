@@ -1,15 +1,45 @@
 \documentclass[12pt, a4paper]{book}
+\usepackage[margin=2.5cm]{geometry}
 \usepackage{ctex}
 \usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{xcolor}
 \usepackage{listings}
-\usepackage{geometry}
 \usepackage{hyperref}
-\geometry{margin=2.5cm}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning, calc}
+
+% listings 代码高亮配置
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+% TikZ 样式定义（用于 Transformer 等架构图）
+\tikzset{
+    layer/.style={rectangle, draw, thick, minimum width=3cm, minimum height=0.8cm, align=center, rounded corners=2pt},
+    attn/.style={layer, fill=blue!10},
+    ffn/.style={layer, fill=orange!10},
+    norm/.style={layer, fill=green!10},
+    emb/.style={layer, fill=gray!20},
+    pos/.style={circle, draw, thick, inner sep=2pt, fill=yellow!20},
+    arrow/.style={-Stealth, thick}
+}
+
 \begin{document}
 \tableofcontents
 \newpage
 \chapter{Activation\_functions}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：激活函数是人工神经网络中负责将线性组合结果映射为非线性输出的数学函数。它决定了神经元是否被“激活”以及信号传递的程度，是神经网络具备模拟复杂非线性逻辑能力的关键。
@@ -127,7 +157,7 @@ GELU & (-0.17, +$\infty$) & 性能优异，平滑度高 & 计算量略大于 ReL
 \end{enumerate}
 
 \chapter{Cnn}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：卷积神经网络（Convolutional Neural Network, CNN）是一种专门用于处理具有网格结构数据（如图像、视频）的深度神经网络。它通过卷积运算提取局部特征，并利用参数共享和池化操作降低模型复杂度。
@@ -273,7 +303,7 @@ class SimpleCNN(nn.Module):
 \end{enumerate}
 
 \chapter{Diffusion}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：扩散模型（Diffusion Models）是一类生成模型，其灵感源自非平衡热力学。它通过定义一个正向扩散过程（逐渐向数据中添加高斯噪声直至其变为纯噪声）和一个反向去噪过程（学习从噪声中恢复原始数据）来学习复杂的数据分布。
@@ -383,7 +413,7 @@ class DiffusionTrainer:
 \end{enumerate}
 
 \chapter{Gan}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：生成对抗网络（Generative Adversarial Network, GAN）是一种通过对抗训练学习数据分布的深度学习架构。它由生成器（Generator）和判别器（Discriminator）组成，两者在相互博弈中共同进化：生成器学习制造逼真数据，判别器学习分辨真伪。
@@ -499,7 +529,7 @@ g_optimizer.step()
 \end{enumerate}
 
 \chapter{Information\_theory}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：信息论是一门利用数学统计方法研究信息的量化、存储和通信的学科。在深度学习中，它提供了衡量概率分布差异（如 KL 散度）、评估模型不确定性（如信息熵）及优化目标函数（如交叉熵）的数学骨架。
@@ -607,7 +637,7 @@ KL 散度 & 衡量分布间差异（生成模型常用） & $[0, \infty)$ \\
 \end{enumerate}
 
 \chapter{Loss\_functions}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：损失函数（Loss Function）是用于衡量模型预测值与真实标签之间差异的函数。它是深度学习优化过程的“指挥棒”，通过反向传播计算梯度，引导模型参数向减少误差的方向更新。
@@ -722,7 +752,7 @@ Dice Loss & 语义分割 & 能够应对严重的类别不平衡。 \\
 \end{enumerate}
 
 \chapter{Mlp}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：多层感知机（Multi-Layer Perceptron, MLP），又称人工神经网络（ANN）或全连接网络，是一种前馈神经网络。它由输入层、一个或多个隐藏层以及输出层组成，层与层之间通过全连接（Fully Connected）的方式连接，即上一层的所有神经元都与下一层的所有神经元相连。
@@ -826,7 +856,7 @@ class MLP(nn.Module):
 \end{enumerate}
 
 \chapter{Positional\_encoding}
-\maketitle
+
 
 \section{核心背景：置换不变性}
 \textbf{问题定义}：Self-Attention 机制本质上是加权和操作，对序列的顺序不敏感（置换不变性）。如果直接将词嵌入丢进 Transformer，模型将无法区分 "I love coding" 和 "coding love I"。因此必须显式地向模型注入位置信息。
@@ -907,7 +937,7 @@ def get_sinusoidal_pe(seq_len, d_model):
 答：因为词向量空间是非稠密的超高维空间。相加可以理解为在词向量中注入了一个“位置指向”的偏置，由于维数极高，这种加法操作在大数定律下类似于在词向量中保留了一个独立的通道来存储位置信息，后续的权重矩阵 $W^Q, W^K$ 在学习过程中会自动解析这两部分内容。
 
 \chapter{Rnn}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：循环神经网络（Recurrent Neural Network, RNN）是一类用于处理序列数据（如文本、时间序列、音频）的神经网络。与传统前馈网络不同，RNN 在层间引入了反馈循环，使得模型能够保留并利用历史信息。
@@ -1024,7 +1054,7 @@ class RNNModel(nn.Module):
 \end{enumerate}
 
 \chapter{Transformer}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：Transformer 是一种基于自注意力机制（Self-Attention Mechanism）的深度学习架构，摒弃了传统的循环神经网络（RNN）和卷积神经网络（CNN），通过全局注意力机制捕获序列数据中的长距离依赖关系。
@@ -1257,7 +1287,7 @@ class SelfAttention(nn.Module):
 \end{enumerate}
 
 \chapter{Vae}
-\maketitle
+
 
 \section{核心定义}
 \textbf{中文定义}：变分自编码器（Variational Autoencoder, VAE）是一种生成模型，它将自编码器（AE）与变分推断相结合。不同于普通 AE 将输入映射为固定的隐向量，VAE 将输入映射为一个概率分布（通常是正态分布），从而使得隐空间具有连续性和可采样性。
