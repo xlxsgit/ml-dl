@@ -4,3 +4,14 @@ texput.log
 .venv/
 __pycache__/
 
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.blg
+*.bbl
