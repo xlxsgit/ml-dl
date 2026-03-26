@@ -1,0 +1,129 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：BERT (Bidirectional Encoder Representations from Transformers)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：BERT（来自 Transformer 的双向编码器表征）是由 Google 在 2018 年提出的一种预训练语言模型。其核心架构是 Transformer 的 \textbf{Encoder-only} 结构，通过在超大规模语料上进行无监督预训练（MLM 和 NSP 任务），学习深层的双向上下文特征表示。
+
+\textbf{英文定义}：BERT (Bidirectional Encoder Representations from Transformers) is a pre-trained NLP model introduced by Google. It uses the Encoder-only Transformer architecture and is trained on massive unlabeled text using Masked Language Modeling (MLM) and Next Sentence Prediction (NSP) to learn deep bidirectional representations.
+
+\textbf{核心哲学}：
+“双向性”是 BERT 的灵魂。不同于传统的自回归模型（如 GPT）只能从左向右看，BERT 同时利用左右两侧的上下文，极大地提升了模型对语言深层语义的理解能力。
+
+\section{输入表示：三层 Embedding 叠加}
+BERT 的输入不仅仅是词向量，而是三个层级的 Embedding 相加：
+\begin{enumerate}
+    \item \textbf{Token Embeddings}：WordPiece 分词后的向量。首个 Token 始终为 \texttt{[CLS]}（用于下游任务分类），句子间用 \texttt{[SEP]} 分隔。
+    \item \textbf{Segment Embeddings}：区分两个不同句子的向量（A 句或 B 句），用于处理问答、内切等句对任务。
+    \item \textbf{Position Embeddings}：学习到的位置向量，用于赋予模型位置感知能力。
+\end{enumerate}
+
+\section{两大预训练任务}
+
+\subsection{1. MLM (Masked Language Model)}
+\textbf{完形填空}：随机遮盖输入序列中 $15\%$ 的 Token，让模型根据上下文预测被遮盖的词。
+\begin{itemize}
+    \item $80\%$ 的概率替换为 \texttt{[MASK]}。
+    \item $10\%$ 的概率替换为随机的一个词。
+    \item $10\%$ 的概率保持原词。
+\end{itemize}
+\textbf{目的}：强制编码器学习双向的词义信息，解决由于双向扫描可能带来的“信息泄露”问题。
+
+\subsection{2. NSP (Next Sentence Prediction)}
+\textbf{下句预测}：给定句对 A 和 B，预测 B 是否是 A 的下一句。这是一个二分类任务。
+\begin{itemize}
+    \item $50\%$ 的样本 B 是 A 的真下句（Label: IsNext）。
+    \item $50\%$ 的样本 B 是语料库中随机抽取的其他句子（Label: NotNext）。
+\end{itemize}
+\textbf{目的}：学习句子粒度之间的关系（Sentence-level coherence），对 QA、NLI 任务至关重要。
+
+\section{微调范式 (Fine-tuning)}
+BERT 的强大之处在于其“极简”的下游任务适配：
+\begin{enumerate}
+    \item \textbf{单句分类}：取首个 Token \texttt{[CLS]} 的输出向量，接全连接层。
+    \item \textbf{标注任务}（如 NER）：取每个 Token 的输出向量进行序列预测。
+    \item \textbf{句对匹配}：将两句拼在一起，取 \texttt{[CLS]} 输出。
+    \item \textbf{问答任务}（如 SQuAD）：让两个全连接层分别预测答案在段落中的起始和结束位置。
+\end{enumerate}
+
+\section{BERT 家族主要变体}
+\begin{itemize}
+    \item \textbf{RoBERTa}：移除了 NSP 任务，使用更大的 Batch、更长的时间和更多的数据进行训练。
+    \item \textbf{ALBERT}：通过参数共享和嵌入层分解极大减少了参数量，提升了训练速度。
+    \item \textbf{DistilBERT}：利用知识蒸馏技术得到的轻量化版本，保留了 BERT $97\%$ 的性能但速度快了 $60\%$。
+\end{itemize}
+
+\section{关键代码：Masked 逻辑演示}
+\begin{lstlisting}
+import torch
+
+# 假设输入 inputs_ids 为 [Batch, Seq]
+# 创建遮盖矩阵 labels 记录真实 ID, inputs_ids 中被遮处填充 [MASK] 的 ID
+mask_prob = 0.15
+rand = torch.rand(input_ids.shape)
+# 创建掩码
+mask_arr = (rand < mask_prob) * (input_ids != 101) * (input_ids != 102) # 避开 [CLS], [SEP]
+
+selection = torch.flatten((mask_arr).nonzero()).tolist()
+input_ids[selection] = 103 # 103 是 [MASK] 的 ID
+\end{lstlisting}
+
+\section{BERT vs. GPT}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特性} & \textbf{BERT} & \textbf{GPT} \\
+\hline
+\textbf{结构} & Encoder-only (Transformer) & Decoder-only (Transformer) \\
+\hline
+\textbf{上下文方向} & Bidirectional (双向) & Unidirectional (单向自回归) \\
+\hline
+\textbf{主要目标} & 理解、分类、特征提取 & 生成、创作、对话 \\
+\hline
+\textbf{推理效率} & 较高 (批量并行) & 逐词生成，KV-cache 优化 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{深度面试题}
+
+\textbf{问：BERT 为什么不用 Transformer 的 Decoder 结构？}\\
+答：Decoder 结构的 Self-Attention 有掩码，只能看到左侧，这会限制模型对“全貌”的理解。BERT 的目标是提取最优表征，因此必须看到全文，Encoder 是天然的选择。
+
+\textbf{问：RoBERTa 为什么要移除 NSP 任务？}\\
+答：实验证明，对于长序列预训练，NSP 任务有时会损害单句表示的可学习性。RoBERTa 通过增大训练数据和步数，即便没有 NSP，其下游任务表现也全面超越了 BERT。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Devlin, J., et al. (2018). \textit{BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding}.
+    \item Liu, Y., et al. (2019). \textit{RoBERTa: A Robustly Optimized BERT Pretraining Approach}.
+\end{enumerate}
+
+\end{document}

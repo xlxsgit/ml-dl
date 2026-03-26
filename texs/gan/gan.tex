@@ -108,7 +108,7 @@ g_optimizer.step()
 
 \subsection{工程实战}
 \textbf{问：WGAN (Wasserstein GAN) 解决了什么核心问题？}\\
-答：解决了原生 GAN 使用 JS 散度在分布不重叠时梯度消失的问题。WGAN 使用 **EM距离 (Earth-Mover's distance)** 配合 **Lipschitz 连续性约束 (Weight Clipping)**，提供了更平滑的梯度映射。
+答：解决了原生 GAN 使用 JS 散度在分布不重叠时梯度消失的问题。WGAN 使用 \textbf{EM距离 (Earth-Mover's distance)} 配合 \textbf{Lipschitz 连续性约束 (Weight Clipping)}，提供了更平滑的梯度映射。
 
 \subsection{坑点分析}
 \textbf{问：在评估 GAN 生成质量时，为什么不用训练集 Loss？}\\

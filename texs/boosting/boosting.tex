@@ -1,0 +1,158 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：Boosting (提升法)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：Boosting（提升法）是一种串行的集成学习方法。其核心思想是将多个弱学习器（Weak Learners）组合成一个强学习器（Strong Learner）。不同于 Bagging 的并行采样，Boosting 通过\textbf{顺序训练}基学习器，后一个学习器致力于修正前一个学习器的错误。
+
+\textbf{英文定义}：Boosting is a sequential ensemble learning technique that combines several weak learners to form a strong learner. Each subsequent model attempts to correct the errors made by the previous models, typically by focusing on difficult-to-predict samples.
+
+\textbf{核心直觉}：
+"勤能补拙"。Boosting 利用基学习器之间的依赖性，通过不断迭代、加权，主要针对的是\textbf{降低模型的偏差（Bias）}。
+
+\section{加法模型与前向分布算法}
+Boosting 模型通常表示为基学习器的\textbf{加法模型（Additive Model）}：
+$$ H(x) = \sum_{t=1}^T \alpha_t h_t(x) $$
+其中 $h_{t}(x)$ 是基学习器，$\alpha_t$ 是其权重。
+为了求解该模型，Boosting 采用\textbf{前向分布算法（Forward Stagewise Algorithm）}：每次只学习一个基学习器及其权重，逐步逼近最优损失。
+$$ f_t(x) = f_{t-1}(x) + \alpha_t h_t(x) $$
+
+\section{典型算法 1：AdaBoost (Adaptive Boosting)}
+
+\subsection{核心机制}
+AdaBoost 主要通过\textbf{调整样本权重}来实现"错误修正"：
+\begin{enumerate}
+    \item \textbf{初始权重}：给所有样本相同的初始权重 $w_{1,i} = 1/N$。
+    \item \textbf{基学习算法}：在加权样本上训练 $h_t(x)$。
+    \item \textbf{错误率计算}：$\epsilon_t = \sum_{i: h_t(x_i) \neq y_i} w_{t,i}$。
+    \item \textbf{模型权重}：$\alpha_t = \frac{1}{2} \ln \frac{1-\epsilon_t}{\epsilon_t}$。
+    \item \textbf{样本权重更新}：$w_{t+1, i} = \frac{w_{t,i}}{Z_t} \exp(-\alpha_t y_i h_t(x_i))$，即误分类样本权重增加，正确分类样本权重减小。
+\end{enumerate}
+
+\subsection{损失函数视角}
+AdaBoost 等价于极小化\textbf{指数损失函数（Exponential Loss）}：
+$$ \min \sum_{i=1}^N \exp(-y_i f(x_i)) $$
+指数损失是 0-1 损失的一个连续可微的上界。
+
+\section{典型代表 2：GBDT (Gradient Boosting Decision Tree)}
+
+\subsection{核心思想：拟合负梯度}
+对于一般的损失函数 $L(y, f(x))$，GBDT 利用\textbf{损失函数的负梯度}在当前模型的值作为残差的近似值：
+$$ r_{it} = - \left[ \frac{\partial L(y_i, f(x_i))}{\partial f(x_i)} \right]_{f(x) = f_{t-1}(x)} $$
+\textbf{直观理解}：GBDT 实际上是在函数空间上执行\textbf{梯度下降}，每一棵新增的树都是沿着损失函数下降最快的方向迈出的一步。
+
+\section{典型代表 3：XGBoost (Extreme Gradient Boosting)}
+XGBoost 是 GBDT 的高性能实现。它不仅在工程上极致优化，在数学上也引入了二阶信息。
+
+\subsection{目标函数的严谨推导}
+\textbf{Step 1: 二阶泰勒展开}。
+在第 $t$ 轮迭代中，目标函数为：
+$$ Obj^{(t)} = \sum_{i=1}^n L(y_i, f_{t-1}(x_i) + f_t(x_i)) + \Omega(f_t) $$
+利用二阶泰勒展开 $\Delta L \approx g_i \Delta f + \frac{1}{2} h_i \Delta f^2$，其中 $g_i, h_i$ 是损失函数对 $f_{t-1}$ 的一阶和二阶导：
+$$ Obj^{(t)} \approx \sum_{i=1}^n [g_i f_t(x_i) + \frac{1}{2} h_i f_t^2(x_i)] + \Omega(f_t) $$
+
+\textbf{Step 2: 树的参数化与正则项}。
+令叶子节点集合为 $j \in \{1,\dots,T\}$，样本集 $I_j = \{i | q(x_i)=j\}$。
+正则项 $\Omega(f_t) = \gamma T + \frac{1}{2} \lambda \sum w_j^2$。定义层级汇总 $G_j = \sum_{i \in I_j} g_i$，$H_j = \sum_{i \in I_j} h_i$：
+$$ Obj^{(t)} = \sum_{j=1}^T [G_j w_j + \frac{1}{2}(H_j + \lambda) w_j^2] + \gamma T $$
+
+\textbf{Step 3: 最优权重与结构分数}。
+解得最优叶子权重 $w_j^* = -\frac{G_j}{H_j + \lambda}$，代入得最优目标函数：
+$$ Obj^* = -\frac{1}{2} \sum_{j=1}^T \frac{G_j^2}{H_j + \lambda} + \gamma T $$
+
+\subsection{分裂收益 (Gain) 公式}
+节点分裂后的增益计算：
+$$ \text{Gain} = \frac{1}{2} \left[ \frac{G_L^2}{H_{L}+\lambda} + \frac{G_R^2}{H_{R}+\lambda} - \frac{(G_L+G_R)^2}{H_{L}+H_{R}+\lambda} \right] - \gamma $$
+
+\section{典型代表 4：LightGBM (Light Gradient Boosting Machine)}
+
+\subsection{GOSS (基于梯度的单侧采样)}
+为了在不牺牲太多精度的前提下减少计算量，GOSS 采用如下采样策略：
+\begin{enumerate}
+    \item 将样本按梯度绝对值排序。
+    \item 保留前 $a \times 100\%$ 的大梯度样本（这些样本通常更难拟合）。
+    \item 从剩余样本中随机采样 $b \times 100\%$，并在计算信息增益时给这些样本权重放大 $\frac{1-a}{b}$ 倍。
+\end{enumerate}
+
+\subsection{EFB (互斥特征捆绑)}
+通过由于特征通常是稀疏且互斥的（即不同时为非零），EFB 将互斥特征捆绑成一个，从而降低特征维度，提高构建直方图的速度。
+
+\subsection{Leaf-wise vs Level-wise}
+\begin{itemize}
+    \item \textbf{Level-wise} (XGBoost): 按层生长，同一层节点同时分裂。稳健但有些节点增益很小，计算冗余。
+    \item \textbf{Leaf-wise} (LightGBM): 每次选增益最大的节点分裂。效率极高，路径较深，容易过拟合（需依靠 \texttt{max\_depth} 约束）。
+\end{itemize}
+
+\section{Boosting 家族综合对比}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\textbf{特征} & \textbf{XGBoost} & \textbf{LightGBM} & \textbf{CatBoost} \\
+\hline
+\textbf{分裂准则} & 二阶泰勒展开(Gain) & 直方图算法 & 二进制对称树 \\
+\hline
+\textbf{生长策略} & Level-wise & Leaf-wise & Level-wise \\
+\hline
+\textbf{降维手段} & 列采样 (Column Subsampling) & GOSS + EFB & 排序提升 (Ordered Boosting) \\
+\hline
+\textbf{缺失值} & 自动学习默认方向 & 划分到特定桶 & 默认处理 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段}
+\begin{lstlisting}
+import xgboost as xgb
+import lightgbm as lgb
+from sklearn.metrics import accuracy_score
+
+# XGBoost 示例
+dtrain = xgb.DMatrix(X_train, label=y_train)
+params_xgb = {'objective': 'binary:logistic', 'max_depth': 4}
+bst_xgb = xgb.train(params_xgb, dtrain, num_boost_round=50)
+
+# LightGBM 示例
+train_data = lgb.Dataset(X_train, label=y_train)
+params_lgb = {'objective': 'binary', 'num_leaves': 31, 'learning_rate': 0.05}
+bst_lgb = lgb.train(params_lgb, train_data, num_boost_round=100)
+\end{lstlisting}
+
+\section{深度面试题}
+\textbf{问：XGBoost 相比 GBDT 做了哪些改进？}
+答：1. 二阶导：利用二阶导信息，收敛更快；2. 正则化：目标函数含叶子数和权重平方项，抗过拟合；3. 列采样：借鉴随机森林防止过拟合；4. 稀疏感知：自动处理缺失值；5. 并行优化：块存储支持特征并行计算。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Chen, T., & Guestrin, C. (2016). \textit{XGBoost: A Scalable Tree Boosting System}.
+    \item Ke, G., et al. (2017). \textit{LightGBM: A Highly Efficient Gradient Boosting Decision Tree}.
+    \item 周志华《机器学习》第 8 章。
+\end{enumerate}
+
+\end{document}

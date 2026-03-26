@@ -1,0 +1,138 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：Bagging (Bootstrap Aggregating)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：Bagging（套袋法），全称 \textbf{Bootstrap Aggregating}，是一种并行的集成学习方法。其核心思想是通过\textbf{自助采样（Bootstrap Sampling）}生成多个子训练集，在每个子集上训练一个基学习器，最后通过投票（分类）或平均（回归）的方式结合所有基学习器的预测结果。
+
+\textbf{英文定义}：Bagging (Bootstrap Aggregating) is an ensemble learning technique that trains multiple base models independently on different subsets of the data created via bootstrap sampling, then combines their predictions through voting or averaging to reduce variance.
+
+\textbf{核心直觉}：
+"三个臭皮匠，顶个诸葛亮"。Bagging 利用多个基学习器之间的差异性来相互抵消误差，主要针对的是\textbf{降低模型的方差（Variance）}。
+
+\section{核心原理：Bootstrap Sampling}
+
+\subsection{什么是自助采样？}
+给定包含 $N$ 个样本的数据集 $D$，自助采样的过程如下：
+每次随机从 $D$ 中挑选一个样本，复制到子集 $D_i$ 中，然后\textbf{将样本放回} $D$。重复 $N$ 次，得到一个包含 $N$ 个样本的子集 $D_i$。
+
+\subsection{包外估计 (Out-of-Bag, OOB)}
+在自助采样中，一个样本在 $N$ 次采样中始终未被抽到的概率为：
+$$ \lim_{N \to \infty} \left( 1 - \frac{1}{N} \right)^N \approx \frac{1}{e} \approx 63.2\% $$
+这意味着约 $36.8\%$ 的样本不会出现在某个子训练集 $D_i$ 中。这些样本被称为\textbf{包外数据（OOB data）}。
+\textbf{妙用}：我们可以直接利用这些 OOB 样本来作为验证集，对基学习器的泛化性能进行评估，而无需额外的交叉验证。
+
+\section{数学原理：为什么能降低方差？}
+假设我们有 $n$ 个独立同分布（i.i.d.）的基学习器，每个学习器的预测方差为 $\sigma^2$。
+\begin{itemize}
+    \item \textbf{基学习器之间完全独立}：集成的总方差为 $\frac{\sigma^2}{n}$。
+    \item \textbf{基学习器之间存在相关性 $\rho$}（现实情况）：集成的总方差为 $\rho \sigma^2 + \frac{1-\rho}{n} \sigma^2$。
+\end{itemize}
+可以看出：
+1. 集成的方差会随着基学习器数量 $n$ 的增加而显著下降。
+2. 即使基学习器之间有正相关（因为它们来自同一个原始数据集），集成的方差仍小于单个学习器。
+这就是为什么 Bagging 特别适合\textbf{高方差模型}（如不加限制的决策树）。
+
+\section{典型代表：随机森林 (Random Forest)}
+随机森林是 Bagging 的最具代表性的变体。它在 Bagging 基础上增加了\textbf{特征随机选择}：
+\begin{itemize}
+    \item \textbf{样本随机性}：自助采样（Bootstrap）。
+    \item \textbf{特征随机性}：在决策树的每个节点分裂时，随机选择 $k$ 个特征（通常 $k = \sqrt{d}$），然后从中选优。
+\end{itemize}
+\textbf{目的}：进一步降低基学习器之间的相关性 $\rho$，从而通过集成更有效地降低整体方差。
+
+\section{Bagging vs. Boosting}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特性} & \textbf{Bagging} & \textbf{Boosting} \\
+\hline
+\textbf{执行顺序} & 并行 (Parallel) & 串行 (Sequential) \\
+\hline
+\textbf{核心手段} & 自助采样 (Bootstrap) & 权重调整 (Residual fitting) \\
+\hline
+\textbf{优化的目标} & 降低方差 (Variance reduction) & 降低偏差 (Bias reduction) \\
+\hline
+\textbf{基学习器} & 强学习器 (如深层树) & 弱学习器 (如浅层树) \\
+\hline
+\textbf{基学习器关系} & 相互独立 & 后者依赖前者 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段}
+\begin{lstlisting}
+import numpy as np
+from sklearn.ensemble import BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+
+# 加载数据
+data = load_wine()
+X, y = data.data, data.target
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# 基础模型：决策树
+base_clf = DecisionTreeClassifier(max_depth=5)
+
+# 初始化 Bagging 
+# n_estimators: 学习器数量
+# oob_score: 启用包外估计
+bagging = BaggingClassifier(
+    estimator=base_clf, 
+    n_estimators=50, 
+    oob_score=True,
+    random_state=42
+)
+
+bagging.fit(X_train, y_train)
+
+print(f"OOB Score: {bagging.oob_score_:.4f}")
+print(f"Test Accuracy: {bagging.score(X_test, y_test):.4f}")
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：Bagging 为什么要用强学习器，而 Boosting 喜欢用弱学习器？}\\
+答：Bagging 的主要目的是通过均值化降低方差。对于高方差的强学习器（如深度决策树），Bagging 能有效消除其各个模型因噪声产生的误差。反之，若用低方差的弱学习器，集成后方差变化不大，偏差却依然很高。
+Boosting 是串行修正偏差。弱学习器偏差高但泛化力强，通过多次迭代拟合残差，能在保持低方差的同时让偏差迅速下降。
+
+\textbf{问：Random Forest 为什么要在分裂时随机选特征？}\\
+答：这是为了\textbf{解耦（De-correlation）}。如果所有树都用最重要的那几个特征作为根节点，那么得到的树往往极其相似。随机选择特征强制让不同的树学习数据的不同侧面，降低了模型间的相关性 $\rho$，从而强化了 Bagging 的方差削减效果。
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{经典论文}: Breiman, L. (1996). \textit{Bagging Predictors}. Machine Learning.
+    \item \textbf{Random Forest}: Breiman, L. (2001). \textit{Random Forests}. Machine Learning.
+    \item \textbf{教材}: 周志华《机器学习》第 8.2 节（Bagging 与随机森林）。
+\end{enumerate}
+
+\end{document}

@@ -156,6 +156,107 @@ GELU & (-0.17, +$\infty$) & 性能优异，平滑度高 & 计算量略大于 ReL
     \item \textbf{CS231n}: Activation Functions and Their Performance Comparison (Stanford University).
 \end{enumerate}
 
+\chapter{Bert}
+
+
+\section{核心定义}
+\textbf{中文定义}：BERT（来自 Transformer 的双向编码器表征）是由 Google 在 2018 年提出的一种预训练语言模型。其核心架构是 Transformer 的 \textbf{Encoder-only} 结构，通过在超大规模语料上进行无监督预训练（MLM 和 NSP 任务），学习深层的双向上下文特征表示。
+
+\textbf{英文定义}：BERT (Bidirectional Encoder Representations from Transformers) is a pre-trained NLP model introduced by Google. It uses the Encoder-only Transformer architecture and is trained on massive unlabeled text using Masked Language Modeling (MLM) and Next Sentence Prediction (NSP) to learn deep bidirectional representations.
+
+\textbf{核心哲学}：
+“双向性”是 BERT 的灵魂。不同于传统的自回归模型（如 GPT）只能从左向右看，BERT 同时利用左右两侧的上下文，极大地提升了模型对语言深层语义的理解能力。
+
+\section{输入表示：三层 Embedding 叠加}
+BERT 的输入不仅仅是词向量，而是三个层级的 Embedding 相加：
+\begin{enumerate}
+    \item \textbf{Token Embeddings}：WordPiece 分词后的向量。首个 Token 始终为 \texttt{[CLS]}（用于下游任务分类），句子间用 \texttt{[SEP]} 分隔。
+    \item \textbf{Segment Embeddings}：区分两个不同句子的向量（A 句或 B 句），用于处理问答、内切等句对任务。
+    \item \textbf{Position Embeddings}：学习到的位置向量，用于赋予模型位置感知能力。
+\end{enumerate}
+
+\section{两大预训练任务}
+
+\subsection{1. MLM (Masked Language Model)}
+\textbf{完形填空}：随机遮盖输入序列中 $15\%$ 的 Token，让模型根据上下文预测被遮盖的词。
+\begin{itemize}
+    \item $80\%$ 的概率替换为 \texttt{[MASK]}。
+    \item $10\%$ 的概率替换为随机的一个词。
+    \item $10\%$ 的概率保持原词。
+\end{itemize}
+\textbf{目的}：强制编码器学习双向的词义信息，解决由于双向扫描可能带来的“信息泄露”问题。
+
+\subsection{2. NSP (Next Sentence Prediction)}
+\textbf{下句预测}：给定句对 A 和 B，预测 B 是否是 A 的下一句。这是一个二分类任务。
+\begin{itemize}
+    \item $50\%$ 的样本 B 是 A 的真下句（Label: IsNext）。
+    \item $50\%$ 的样本 B 是语料库中随机抽取的其他句子（Label: NotNext）。
+\end{itemize}
+\textbf{目的}：学习句子粒度之间的关系（Sentence-level coherence），对 QA、NLI 任务至关重要。
+
+\section{微调范式 (Fine-tuning)}
+BERT 的强大之处在于其“极简”的下游任务适配：
+\begin{enumerate}
+    \item \textbf{单句分类}：取首个 Token \texttt{[CLS]} 的输出向量，接全连接层。
+    \item **标注任务**（如 NER）：取每个 Token 的输出向量进行序列预测。
+    \item **句对匹配**：将两句拼在一起，取 \texttt{[CLS]} 输出。
+    \item **问答任务**（如 SQuAD）：让两个全连接层分别预测答案在段落中的起始和结束位置。
+\end{enumerate}
+
+\section{BERT 家族主要变体}
+\begin{itemize}
+    \item \textbf{RoBERTa}：移除了 NSP 任务，使用更大的 Batch、更长的时间和更多的数据进行训练。
+    \item \textbf{ALBERT}：通过参数共享和嵌入层分解极大减少了参数量，提升了训练速度。
+    \item \textbf{DistilBERT}：利用知识蒸馏技术得到的轻量化版本，保留了 BERT $97\%$ 的性能但速度快了 $60\%$。
+\end{itemize}
+
+\section{关键代码：Masked 逻辑演示}
+\begin{lstlisting}
+import torch
+
+# 假设输入 inputs_ids 为 [Batch, Seq]
+# 创建遮盖矩阵 labels 记录真实 ID, inputs_ids 中被遮处填充 [MASK] 的 ID
+mask_prob = 0.15
+rand = torch.rand(input_ids.shape)
+# 创建掩码
+mask_arr = (rand < mask_prob) * (input_ids != 101) * (input_ids != 102) # 避开 [CLS], [SEP]
+
+selection = torch.flatten((mask_arr).nonzero()).tolist()
+input_ids[selection] = 103 # 103 是 [MASK] 的 ID
+\end{lstlisting}
+
+\section{BERT vs. GPT}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特性} & \textbf{BERT} & \textbf{GPT} \\
+\hline
+\textbf{结构} & Encoder-only (Transformer) & Decoder-only (Transformer) \\
+\hline
+\textbf{上下文方向} & Bidirectional (双向) & Unidirectional (单向自回归) \\
+\hline
+\textbf{主要目标} & 理解、分类、特征提取 & 生成、创作、对话 \\
+\hline
+\textbf{推理效率} & 较高 (批量并行) & 逐词生成，KV-cache 优化 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{深度面试题}
+
+\textbf{问：BERT 为什么不用 Transformer 的 Decoder 结构？}\\
+答：Decoder 结构的 Self-Attention 有掩码，只能看到左侧，这会限制模型对“全貌”的理解。BERT 的目标是提取最优表征，因此必须看到全文，Encoder 是天然的选择。
+
+\textbf{问：RoBERTa 为什么要移除 NSP 任务？}\\
+答：实验证明，对于长序列预训练，NSP 任务有时会损害单句表示的可学习性。RoBERTa 通过增大训练数据和步数，即便没有 NSP，其下游任务表现也全面超越了 BERT。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Devlin, J., et al. (2018). \textit{BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding}.
+    \item Liu, Y., et al. (2019). \textit{RoBERTa: A Robustly Optimized BERT Pretraining Approach}.
+\end{enumerate}
+
 \chapter{Cnn}
 
 
@@ -496,7 +597,7 @@ g_optimizer.step()
 
 \subsection{工程实战}
 \textbf{问：WGAN (Wasserstein GAN) 解决了什么核心问题？}\\
-答：解决了原生 GAN 使用 JS 散度在分布不重叠时梯度消失的问题。WGAN 使用 **EM距离 (Earth-Mover's distance)** 配合 **Lipschitz 连续性约束 (Weight Clipping)**，提供了更平滑的梯度映射。
+答：解决了原生 GAN 使用 JS 散度在分布不重叠时梯度消失的问题。WGAN 使用 \textbf{EM距离 (Earth-Mover's distance)} 配合 \textbf{Lipschitz 连续性约束 (Weight Clipping)}，提供了更平滑的梯度映射。
 
 \subsection{坑点分析}
 \textbf{问：在评估 GAN 生成质量时，为什么不用训练集 Loss？}\\
@@ -526,6 +627,114 @@ g_optimizer.step()
     \item \textbf{奠基论文}: Goodfellow, I., et al. (2014). \textit{Generative Adversarial Nets}. NIPS.
     \item \textbf{工程标杆}: Radford, A., et al. (2015). \textit{Unsupervised Representation Learning with DCGAN}.
     \item \textit{GAN Lab}: Google 提供的交互式 GAN 训练可视化工具。
+\end{enumerate}
+
+\chapter{Gpt}
+
+
+\section{核心定义}
+\textbf{中文定义}：GPT（生成式预训练 Transformer）是由 OpenAI 提出的一系列自回归语言模型。其核心架构基于 Transformer 的 \textbf{Decoder-only} 结构，通过在大规模无标注文本上进行“下一个词预测”（Next Token Prediction）的生成式预训练，学习通用的语言表征能力。
+
+\textbf{英文定义}：GPT (Generative Pre-trained Transformer) is a series of auto-regressive language models developed by OpenAI. Based on the Decoder-only Transformer architecture, it is pre-trained on massive unlabeled text via the objective of "next token prediction" to learn general-purpose language representations.
+
+\textbf{核心哲学}：
+GPT 的成功证明了“预训练 + 微调/零样本提示”范式的强大。它通过增大参数规模（Scaling Laws）和数据量，实现了从专用模型到通用人工智能（AGI）的跨越。
+
+\section{架构：Decoder-only Transformer}
+
+\subsection{为什么只用 Decoder？}
+与原始 Transformer（Encoder-Decoder）和 BERT（Encoder-only）不同，GPT 舍弃了 Encoder，只保留 Decoder。
+\begin{enumerate}
+    \item \textbf{生成任务的天性}：生成任务是自左向右的，Decoder 的 Masked Self-Attention 完美契合这种训练方式。
+    \item \textbf{自回归建模}：GPT 将条件概率分解为 $P(x) = \prod P(x_i | x_{<i})$。这种因果建模使得模型在推理时能够逐词生成。
+\end{enumerate}
+
+\subsection{结构组件}
+一个典型的 GPT Block 包含：
+\begin{itemize}
+    \item \textbf{Masked Multi-Head Attention}：确保当前计算只能看到之前的词，防止“偷看答案”。
+    \item \textbf{Layer Normalization}：通常采用 Pre-LN 结构以增加深层模型的稳定性。
+    \item \textbf{Position-wise FFN}：两层全连接网络，通常使用 GeLU 激活函数。
+\end{itemize}
+
+\section{Evolution: 从 GPT-1 到 GPT-4}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{模型} & \textbf{参数量} & \textbf{核心贡献} \\
+\hline
+GPT-1 & 1.17 亿 & 确立了“生成式预训练 + 判别式微调”的二阶段流程。 \\
+\hline
+GPT-2 & 15 亿 & 强调 \textbf{Zero-shot} 能力，展示了模型在不经微调下处理多任务的潜力。 \\
+\hline
+GPT-3 & 1750 亿 & 引入 \textbf{In-Context Learning (ICL)}，通过 Few-shot 提示即可完成复杂任务。 \\
+\hline
+InstructGPT & 1750 亿 & 引入 \textbf{RLHF}，使模型输出符合人类指令和偏好（Alignment）。 \\
+\hline
+GPT-4 & 未公开 (万亿级) & 多模态理解力、处理长输入、极强的推理和逻辑能力。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{RLHF：对齐人类偏好}
+为了让模型不产生胡言乱语或有害内容，OpenAI 引入了\textbf{人类反馈强化学习（RLHF）}：
+\begin{enumerate}
+    \item \textbf{监督微调 (SFT)}：在人工编写的问答对上进行微调。
+    \item \textbf{奖励模型 (RM) 训练}：人类对模型的多个输出进行排序，训练一个评分模型。
+    \item \textbf{强化学习 (PPO)}：使用奖励模型作为反馈，通过强化学习优化策略，使得生成内容得分最高。
+\end{enumerate}
+
+\section{GPT vs. BERT}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特性} & \textbf{BERT} & \textbf{GPT} \\
+\hline
+\textbf{架构} & Encoder-only & Decoder-only \\
+\hline
+\textbf{注意力} & Bidirectional (双向) & Unidirectional (因果/单向) \\
+\hline
+\textbf{预训练目标} & MLM (填空) & CLM (预测下一个词) \\
+\hline
+\textbf{擅长领域} & 理解、分类、抽取 & 创意写作、对话、代码生成 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码：Causal Self-Attention mask}
+GPT 的核心在于其因果掩码，在 PyTorch 中通常这样实现：
+\begin{lstlisting}
+import torch
+import torch.nn as nn
+
+def create_causal_mask(size):
+    # 生成一个上三角矩阵，并取反，使得左下角(包含对角线)为 1
+    mask = torch.tril(torch.ones(size, size))
+    return mask == 0 # True 的地方将被填充为 -inf
+
+# 在 Attention 计算中的应用
+# scores: [Batch, Heads, Seq, Seq]
+mask = create_causal_mask(seq_len)
+scores = scores.masked_fill(mask, float('-inf'))
+attn = torch.softmax(scores, dim=-1)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：为什么 GPT 相比 BERT 展现出了更强的通用泛化能力？}\\
+答：1. \textbf{预训练难度}：CLM（预测未来）比 MLM（填补中间）更难，模型被迫学习更深层的逻辑和语义；2. \textbf{任务统一}：自然语言的所有任务都可以转化为生成任务（即 Prompting），这使得 GPT 可以直接进行 Zero-shot 迁移，而 BERT 往往需要针对每个下游任务修改 Head 并全量微调。
+
+\textbf{问：什么是涌现能力 (Emergent Abilities)？}\\
+答：指当模型参数量突破某个临界点（如 600 亿）时，模型在某些任务（如逻辑推理、数学计算）上的表现会突然从接近随机猜测跃升到远超标准水平。这是大模型（LLM）区别于小模型的最显著特征。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Radford, A., et al. (2018). \textit{Improving Language Understanding by Generative Pre-Training} (GPT-1).
+    \item Brown, T., et al. (2020). \textit{Language Models are Few-Shot Learners} (GPT-3).
+    \item Ouyang, L., et al. (2022). \textit{Training language models to follow instructions with human feedback} (InstructGPT).
 \end{enumerate}
 
 \chapter{Information\_theory}

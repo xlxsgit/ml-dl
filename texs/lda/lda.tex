@@ -1,0 +1,134 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：线性判别分析 (LDA)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：线性判别分析（Linear Discriminant Analysis, LDA），也称为 Fisher 线性判别（Fisher's Linear Discriminant, FLD），是一种经典的监督学习投影方法。其核心思想是将高维样本投影到低维空间，使得投影后的数据在新的维度上\textbf{类内方差最小、类间方差最大}。
+
+\textbf{英文定义}：Linear Discriminant Analysis (LDA) is a supervised dimensionality reduction and classification technique that projects data into a lower-dimensional space while maximizing the ratio of between-class variance to within-class variance.
+
+\textbf{核心直觉}：
+想象两坨散布在二维平面上的点。LDA 的目标是找一条直线，把这些点投射上去后，同类别的点靠得尽可能近（类内紧凑），不同类别的中心点离得尽可能远（类间分离）。
+
+\section{数学推导：Fisher 判别准则}
+
+\subsection{类内散度矩阵 (Within-class Scatter Matrix)}
+设数据集 $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$，第 $i \in \{0, 1\}$ 类的均值向量为 $\mu_i$，样本集合为 $X_i$。
+类内散度矩阵 $S_w$ 定义为：
+$$ S_w = \Sigma_0 + \Sigma_1 $$
+其中 $\Sigma_i = \sum_{x \in X_i} (x - \mu_i)(x - \mu_i)^\top$。它衡量了每一类内部的数据发散程度。
+
+\subsection{类间散度矩阵 (Between-class Scatter Matrix)}
+类间散度矩阵 $S_b$ 定义为：
+$$ S_b = (\mu_0 - \mu_1)(\mu_0 - \mu_1)^\top $$
+它衡量了不同类中心之间的距离。
+
+\subsection{最优化目标}
+设投影方向为向量 $w$。投影后的类间方差为 $w^\top S_b w$，类内方差为 $w^\top S_w w$。
+Fisher 判别准则的目标是最大化广义瑞利商：
+$$ J(w) = \frac{w^\top S_b w}{w^\top S_w w} $$
+
+\subsection{解的求取}
+最大化 $J(w)$ 等价于在约束 $w^\top S_w w = 1$ 下最大化 $w^\top S_b w$。利用拉格朗日乘子法，解满足：
+$$ S_b w = \lambda S_w w $$
+对于二分类问题，由于 $S_b w$ 的方向始终在 $(\mu_0 - \mu_1)$ 上，我们可以直接得到最优投影方向：
+$$ w = S_w^{-1} (\mu_0 - \mu_1) $$
+\textbf{注意}：实际应用中常对 $S_w$ 进行正则化（如 $S_w + \epsilon I$）以保证其可逆性。
+
+\section{多分类扩展}
+对于 $N > 2$ 的分类任务，LDA 将数据投影到 $M-1$ 维空间（$M$ 为类别数）。
+\begin{itemize}
+    \item \textbf{全局均值}：$\mu = \frac{1}{N} \sum n_i \mu_i$。
+    \item \textbf{多类类间散度}：$S_b = \sum_{i=1}^M n_i (\mu_i - \mu)(\mu_i - \mu)^\top$。
+    \item \textbf{多类类内散度}：$S_w = \sum_{i=1}^M S_{w,i}$。
+\end{itemize}
+此时需要求解矩阵 $S_w^{-1} S_b$ 的最大特征值对应的特征向量。
+
+\section{LDA vs. PCA}
+这是面试中最常问的对比。
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特性} & \textbf{PCA (主成分分析)} & \textbf{LDA (线性判别分析)} \\
+\hline
+\textbf{监督类型} & 无监督 (Unsupervised) & 有监督 (Supervised) \\
+\hline
+\textbf{核心目标} & 最大化投影后的总方差 (保持信息) & 最大化类间/类内方差比 (分类) \\
+\hline
+\textbf{降维上限} & 特征维度 $d$ & 类别数减一 $M-1$ \\
+\hline
+\textbf{适用场景} & 数据压缩、噪声过滤 & 预处理以进行分类 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{局限性}
+\begin{enumerate}
+    \item \textbf{线性假设}：LDA 假设数据分布是高斯分布，且各类的协方差矩阵相同。如果不满足（如非线性分布），效果可能不如核 LDA (Kernel LDA)。
+    \item \textbf{降维限制}：降维后的维度最多为 $M-1$，这在类别数较少时限制了特征的保留。
+    \item \textbf{对异常值敏感}：均值的计算容易受到离群点的影响。
+\end{enumerate}
+
+\section{关键代码片段}
+\begin{lstlisting}
+import numpy as np
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.datasets import load_iris
+
+# 加载数据 (Iris 3类别)
+data = load_iris()
+X, y = data.data, data.target
+
+# 初始化并训练 LDA
+# n_components 最多为 类别数-1 = 2
+lda = LinearDiscriminantAnalysis(n_components=2)
+X_lda = lda.fit_transform(X, y)
+
+print(f"原始维度: {X.shape[1]}")
+print(f"降维后维度: {X_lda.shape[1]}")
+print(f"可解释方差比: {lda.explained_variance_ratio_}")
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：LDA 降维后的维度上限为什么是 $M-1$？}\\
+答：因为类间散度矩阵 $S_b$ 是由 $M$ 个均值向量 $(\mu_i - \mu)$ 的外积之和构成的。由于这 $M$ 个向量的线性组合为 0（即 $\sum n_i(\mu_i - \mu) = 0$），所以这组向量中最多只有 $M-1$ 个是线性无关的。因此，$S_b$ 的秩（Rank）最大为 $M-1$。矩阵 $S_w^{-1} S_b$ 的非零特征值最多也就只有 $M-1$ 个。
+
+\textbf{问：LDA 一定比 PCA 更适合分类任务吗？}\\
+答：不一定。虽然 LDA 利用了标签信息，但它假设类内分布服从高斯分布且协方差相同。如果数据的方差主要由非相关特征引起，或者类别是高度非线性的（比如环形分布），PCA 保持最大方差或核 PCA 往往能提供比 LDA 更好的特征。
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{经典论文}: Fisher, R. A. (1936). \textit{The use of multiple measurements in taxonomic problems}. Annals of Eugenics.
+    \item \textbf{教材}: 周志华《机器学习》第 3.4 节（线性判别分析）。
+    \item \textbf{理论进阶}: \textit{Elements of Statistical Learning}, Chapter 4.3.
+\end{enumerate}
+
+\end{document}

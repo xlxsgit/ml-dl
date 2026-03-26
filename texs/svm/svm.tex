@@ -1,0 +1,197 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning, calc}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：支持向量机 (SVM)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：支持向量机（Support Vector Machine, SVM）是一种基于\textbf{最大间隔}原理的监督学习算法。其核心思想是在特征空间中找到一个最优超平面，使得该超平面到最近的训练样本（支持向量）的距离最大化。
+
+\textbf{英文定义}：Support Vector Machine (SVM) is a supervised learning algorithm that finds the optimal hyperplane which maximizes the margin between the closest data points (support vectors) of different classes.
+
+\textbf{历史地位}：SVM 由 Vapnik 等人在 1990 年代提出，在深度学习兴起之前，SVM 是机器学习领域最强大的分类算法之一，广泛应用于文本分类、图像识别和生物信息学。其背后的统计学习理论（VC 维、结构风险最小化）至今仍是机器学习理论的基石。
+
+\section{线性可分 SVM：硬间隔}
+
+\subsection{几何直觉：为什么要最大化间隔？}
+给定线性可分的二分类数据集，能将数据分开的超平面有无穷多个。SVM 的核心哲学是：选择\textbf{间隔最大}的那个超平面，因为它对未见数据的泛化能力最强（鲁棒性最好）。
+
+\subsection{数学建模}
+超平面定义为 $w^\top x + b = 0$，其中：
+\begin{itemize}
+    \item $w \in \mathbb{R}^d$：法向量，决定超平面的方向。
+    \item $b \in \mathbb{R}$：偏置，决定超平面的位移。
+    \item 点 $x_i$ 到超平面的\textbf{几何距离}：$\gamma_i = \frac{|w^\top x_i + b|}{\|w\|}$。
+\end{itemize}
+
+\subsection{最大间隔优化问题}
+设标签 $y_i \in \{-1, +1\}$，SVM 的原始优化问题为：
+$$ \max_{w, b} \frac{2}{\|w\|} \quad \text{s.t.} \quad y_i(w^\top x_i + b) \geq 1, \quad \forall i $$
+等价于（取倒数并平方）：
+$$ \min_{w, b} \frac{1}{2} \|w\|^2 \quad \text{s.t.} \quad y_i(w^\top x_i + b) \geq 1, \quad \forall i $$
+\textbf{变量含义}：
+\begin{itemize}
+    \item $\frac{2}{\|w\|}$：两类支持向量之间的\textbf{间隔宽度}（Margin）。
+    \item $y_i(w^\top x_i + b) \geq 1$：约束条件，确保所有样本被正确分类且距离超平面至少为 $\frac{1}{\|w\|}$。
+    \item \textbf{支持向量}：满足 $y_i(w^\top x_i + b) = 1$ 的样本点，它们恰好落在间隔的边界上。
+\end{itemize}
+
+\section{对偶问题与 KKT 条件}
+
+\subsection{为什么要转化为对偶问题？}
+\begin{enumerate}
+    \item 引入拉格朗日乘子后，问题从$d$维（特征维度）转化为$N$维（样本数量），在高维特征空间中更高效。
+    \item 对偶形式中目标函数只涉及 $x_i^\top x_j$（内积），为\textbf{核技巧}的使用奠定了基础。
+\end{enumerate}
+
+\subsection{拉格朗日对偶推导}
+引入拉格朗日乘子 $\alpha_i \geq 0$，构造拉格朗日函数：
+$$ L(w, b, \alpha) = \frac{1}{2}\|w\|^2 - \sum_{i=1}^N \alpha_i \left[ y_i(w^\top x_i + b) - 1 \right] $$
+分别对 $w$ 和 $b$ 求偏导并令其为零：
+\begin{align}
+\frac{\partial L}{\partial w} = 0 &\Rightarrow w = \sum_{i=1}^N \alpha_i y_i x_i \\
+\frac{\partial L}{\partial b} = 0 &\Rightarrow \sum_{i=1}^N \alpha_i y_i = 0
+\end{align}
+代入 $L$ 得到\textbf{对偶问题}：
+$$ \max_\alpha \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j x_i^\top x_j $$
+$$ \text{s.t.} \quad \alpha_i \geq 0, \quad \sum_{i=1}^N \alpha_i y_i = 0 $$
+
+\subsection{KKT 条件}
+对于最优解，必须满足 KKT 互补松弛条件：
+$$ \alpha_i \left[ y_i(w^\top x_i + b) - 1 \right] = 0 $$
+\textbf{关键洞察}：若 $\alpha_i > 0$,则 $y_i(w^\top x_i + b) = 1$，该样本恰好是\textbf{支持向量}。大多数样本的 $\alpha_i = 0$，不影响决策边界——这就是 SVM 的\textbf{稀疏性}。
+
+\section{软间隔 SVM}
+
+\subsection{为什么需要软间隔？}
+现实数据往往线性不完全可分，或者存在噪声点。硬间隔 SVM 对异常值极度敏感，一个噪声点就能彻底改变决策边界。
+
+\subsection{松弛变量与惩罚因子}
+引入松弛变量 $\xi_i \geq 0$ 允许部分样本违反间隔约束：
+$$ \min_{w, b, \xi} \frac{1}{2}\|w\|^2 + C \sum_{i=1}^N \xi_i $$
+$$ \text{s.t.} \quad y_i(w^\top x_i + b) \geq 1 - \xi_i, \quad \xi_i \geq 0 $$
+\textbf{变量含义}：
+\begin{itemize}
+    \item $\xi_i$：第 $i$ 个样本允许的违反量。$\xi_i = 0$ 表示正确分类且在间隔外；$0 < \xi_i < 1$ 表示在间隔内但正确分类；$\xi_i \geq 1$ 表示被错误分类。
+    \item $C > 0$：\textbf{惩罚因子}，控制"间隔最大化"与"分类错误最小化"的权衡。$C$ 越大越不容忍错误，$C$ 越小越追求宽间隔。
+\end{itemize}
+
+\section{核技巧 (Kernel Trick)}
+
+\subsection{核心思想}
+当数据在原始空间非线性可分时，将数据映射到\textbf{高维特征空间} $\phi(x)$，在高维空间中寻找线性超平面。
+
+\textbf{关键问题}：高维映射 $\phi(x)$ 的计算代价极高（甚至无穷维）。
+
+\textbf{核技巧的巧妙之处}：由于对偶问题中只涉及内积 $x_i^\top x_j$，因此只需要定义一个\textbf{核函数} $K(x_i, x_j) = \phi(x_i)^\top \phi(x_j)$，而\textbf{不需要显式计算} $\phi(x)$。
+
+\subsection{常用核函数}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{核函数} & \textbf{公式} & \textbf{特点} \\
+\hline
+线性核 & $K(x_i, x_j) = x_i^\top x_j$ & 不做映射，等价于线性 SVM。 \\
+\hline
+多项式核 & $K(x_i, x_j) = (x_i^\top x_j + c)^d$ & 映射到有限维空间，$d$ 控制复杂度。 \\
+\hline
+RBF (高斯核) & $K(x_i, x_j) = e^{-\gamma \|x_i - x_j\|^2}$ & 映射到无穷维空间，最常用。$\gamma$ 越大，决策边界越复杂。 \\
+\hline
+Sigmoid 核 & $K(x_i, x_j) = \tanh(\beta x_i^\top x_j + \theta)$ & 类似神经网络，不总满足 Mercer 条件。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{核函数的合法性：Mercer 定理}
+一个函数 $K(x, z)$ 能作为合法的核函数，当且仅当对于任意有限样本集，由 $K(x_i, x_j)$ 构成的\textbf{Gram 矩阵}是半正定的。
+
+\section{SMO 算法简述}
+序列最小优化（Sequential Minimal Optimization, SMO）是 SVM 最常用的求解算法，由 Platt (1998) 提出。其核心思想是每次只选取两个 $\alpha_i, \alpha_j$ 进行优化（因为约束 $\sum \alpha_i y_i = 0$ 要求至少同时更新两个变量），将二次规划问题分解为大量的解析可解的子问题。
+
+\section{Hinge Loss 视角}
+SVM 也可以从损失函数角度理解。软间隔 SVM 等价于最小化：
+$$ \min_{w, b} \sum_{i=1}^N \max(0, 1 - y_i(w^\top x_i + b)) + \frac{\lambda}{2} \|w\|^2 $$
+其中 $\max(0, 1 - y_i f(x_i))$ 就是\textbf{Hinge Loss}，它对正确分类且间隔充足的样本给予零损失，对违反间隔的样本给予线性惩罚。与之对比：
+\begin{itemize}
+    \item \textbf{逻辑回归}使用 Log Loss：$\log(1 + e^{-yf(x)})$，对所有样本都有非零损失。
+    \item \textbf{SVM} 使用 Hinge Loss：只关注间隔附近的样本（支持向量），这正是 SVM 稀疏性的来源。
+\end{itemize}
+
+\section{关键代码片段}
+\begin{lstlisting}
+from sklearn.svm import SVC
+from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
+
+# 生成非线性可分数据
+X, y = make_moons(n_samples=200, noise=0.15, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# RBF 核 SVM
+svm = SVC(kernel='rbf', C=1.0, gamma='scale')
+svm.fit(X_train, y_train)
+
+print(f"Support Vectors: {svm.n_support_}")  # 支持向量数量
+print(f"Accuracy: {svm.score(X_test, y_test):.4f}")
+\end{lstlisting}
+
+\section{SVM vs 其他模型}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{对比维度} & \textbf{分析} \\
+\hline
+\textbf{vs 逻辑回归} & LR 最大化似然（概率视角），SVM 最大化间隔（几何视角）。SVM 不直接输出概率。 \\
+\hline
+\textbf{vs 决策树} & 决策树可解释性强但易过拟合，SVM 泛化能力强但可解释性差。 \\
+\hline
+\textbf{vs 神经网络} & 神经网络可自动学习特征，SVM 依赖核函数设计。在大数据上神经网络更优，小数据上 SVM 更稳健。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{深度面试题}
+
+\textbf{问：SVM 为什么对数据缩放敏感？}\\
+答：SVM 的目标是最大化间隔 $\frac{2}{\|w\|}$，间隔的计算依赖于特征的尺度。如果某个特征的数值范围远大于其他特征，该特征会主导距离计算，导致超平面偏向该特征的方向。因此使用 SVM 前通常需要对数据进行标准化。
+
+\textbf{问：RBF 核的 $\gamma$ 参数如何影响模型？}\\
+答：$\gamma$ 控制单个样本的影响范围。$\gamma$ 越大，每个样本的影响范围越小，决策边界越复杂（容易过拟合）；$\gamma$ 越小，影响范围越大，决策边界越平滑（可能欠拟合）。可以直觉理解为：$\gamma$ 大相当于"近视"，只看最近的点。
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{经典论文}: Vapnik, V. (1995). \textit{The Nature of Statistical Learning Theory}. Springer.
+    \item \textbf{SMO 算法}: Platt, J. (1998). \textit{Sequential Minimal Optimization}. Microsoft Research Technical Report.
+    \item \textbf{教材}: 周志华《机器学习》第 6 章（支持向量机）。
+    \item \textbf{工程实践}: \texttt{sklearn.svm.SVC} 官方文档。
+\end{enumerate}
+
+\end{document}
