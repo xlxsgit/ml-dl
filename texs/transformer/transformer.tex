@@ -5,6 +5,20 @@
 \usepackage{amsmath, amssymb}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning, calc}
+
+% 定义样式
+\tikzset{
+    layer/.style={rectangle, draw, thick, minimum width=3cm, minimum height=0.8cm, align=center, rounded corners=2pt},
+    attn/.style={layer, fill=blue!10},
+    ffn/.style={layer, fill=orange!10},
+    norm/.style={layer, fill=green!10},
+    emb/.style={layer, fill=gray!20},
+    pos/.style={circle, draw, thick, inner sep=2pt, fill=yellow!20},
+    arrow/.style={-Stealth, thick}
+}
 
 \lstset{
     language=Python,
@@ -81,25 +95,73 @@ $$
 $$
 其中，$\text{head}_i = \text{Attention}(Q W_i^Q, K W_i^K, V W_i^V)$。
 
-\section{模型结构/架构示意图}
-Transformer Encoder Block 的简化架构如下所示：
-\begin{verbatim}
-[输入 Tensor: B x L x D, 例如 32 x 128 x 512] 
-      |
-      +----- (Residual Connection Skip) --------+
-      |                                         |
-[ Multi-Head Self-Attention ] <--- (计算 Q, K, V)
-      |                                         |
-[ Add & Layer Normalization ] <-----------------+
-      |
-      +----- (Residual Connection Skip) --------+
-      |                                         |
-[ Feed Forward Network (FFN) ]                  |
-      |                                         |
-[ Add & Layer Normalization ] <-----------------+
-      |
-[ 输出 Tensor: B x L x D ]
-\end{verbatim}
+\section{模型结构示意图 (Full Architecture)}
+
+\begin{figure}[h!]
+\centering
+\resizebox{0.88\textwidth}{!}{
+\begin{tikzpicture}[node distance=1.8cm, auto]
+
+    % --- Encoder ---
+    \node [emb] (input_emb) {Input Embedding};
+    \node [pos] (pos_enc_in) [right=0.2cm of input_emb] {+};
+    \node [below=0.1cm of pos_enc_in, font=\tiny] {Positional Encoding};
+    
+    \node [attn, above=of input_emb] (multi_head_enc) {Multi-Head Self-Attention};
+    \node [norm, above=0.6cm of multi_head_enc] (norm1_enc) {Add \& Norm};
+    \node [ffn, above=of norm1_enc] (ffn_enc) {Feed Forward};
+    \node [norm, above=0.6cm of ffn_enc] (norm2_enc) {Add \& Norm};
+    
+    \draw [arrow] (input_emb) -- (multi_head_enc);
+    \draw [arrow] (multi_head_enc) -- (norm1_enc);
+    \draw [arrow] (norm1_enc) -- (ffn_enc);
+    \draw [arrow] (ffn_enc) -- (norm2_enc);
+    
+    % Residuals Encoder
+    \draw [arrow] ($(input_emb.north)$) -- ++(-1.8,0) |- (norm1_enc.west);
+    \draw [arrow] ($(norm1_enc.north)$) -- ++(-1.8,0) |- (norm2_enc.west);
+    
+    \node [left=1.5cm of norm2_enc, font=\small\bfseries] {Encoder ($\times N$)};
+
+    % --- Decoder ---
+    \node [emb, right=4.0cm of input_emb] (output_emb) {Output Embedding\\(Shifted Right)};
+    \node [pos] (pos_enc_out) [right=0.2cm of output_emb] {+};
+    
+    \node [attn, above=of output_emb] (masked_attn) {Masked Multi-Head\\Self-Attention};
+    \node [norm, above=0.6cm of masked_attn] (norm1_dec) {Add \& Norm};
+    
+    \node [attn, above=of norm1_dec] (cross_attn) {Multi-Head\\Cross-Attention};
+    \node [norm, above=0.6cm of cross_attn] (norm2_dec) {Add \& Norm};
+    
+    \node [ffn, above=of norm2_dec] (ffn_dec) {Feed Forward};
+    \node [norm, above=0.6cm of ffn_dec] (norm3_dec) {Add \& Norm};
+    
+    \node [layer, fill=purple!10, above=of norm3_dec] (linear) {Linear \& Softmax};
+    
+    \draw [arrow] (output_emb) -- (masked_attn);
+    \draw [arrow] (masked_attn) -- (norm1_dec);
+    \draw [arrow] (norm1_dec) -- (cross_attn);
+    \draw [arrow] (cross_attn) -- (norm2_dec);
+    \draw [arrow] (norm2_dec) -- (ffn_dec);
+    \draw [arrow] (ffn_dec) -- (norm3_dec);
+    \draw [arrow] (norm3_dec) -- (linear);
+    
+    % Residuals Decoder
+    \draw [arrow] ($(output_emb.north)$) -- ++(1.8,0) |- (norm1_dec.east);
+    \draw [arrow] ($(norm1_dec.north)$) -- ++(1.8,0) |- (norm2_dec.east);
+    \draw [arrow] ($(norm2_dec.north)$) -- ++(1.8,0) |- (norm3_dec.east);
+    
+    % Cross-Attention Connection
+    \path (norm2_enc.east) -- (cross_attn.west) coordinate[midway] (mid_point);
+    \draw [arrow, dashed, ultra thick, blue!60] (norm2_enc.east) -- (mid_point |- norm2_enc.east) 
+          node[above, font=\tiny, fill=white, inner sep=1pt] {Encoder Output (K, V)} 
+          -| (cross_attn.west);
+    
+    \node [right=1.0cm of norm3_dec, font=\small\bfseries] {Decoder ($\times N$)};
+
+\end{tikzpicture}}
+\caption{Transformer Full Architecture (Attention Is All You Need)}
+\end{figure}
 
 \section{关键代码片段 (PyTorch实现)}
 以下为 Transformer 中最核心的多头自注意力的简化实现（便于展示原理，省略了多头拆分的重塑操作细节）：

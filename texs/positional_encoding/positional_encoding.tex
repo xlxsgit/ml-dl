@@ -32,75 +32,78 @@
 \textbf{问题定义}：Self-Attention 机制本质上是加权和操作，对序列的顺序不敏感（置换不变性）。如果直接将词嵌入丢进 Transformer，模型将无法区分 "I love coding" 和 "coding love I"。因此必须显式地向模型注入位置信息。
 
 \section{绝对位置编码 (Absolute PE)}
-将每个位置 $pos$ 映射为一个唯一的向量。
+通过将位置向量与词嵌入向量相加（Addition）来实现。
 
-\subsection{1. 正余弦固定编码 (Sinusoidal)}
+\subsection{正余弦固定编码 (Sinusoidal)}
 Vaswani 等人 (2017) 提出利用不同频率的正余弦函数：
 $$ PE(pos, 2i) = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right), \quad PE(pos, 2i+1) = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right) $$
-\textbf{优势}：允许模型通过线性变换学习\textbf{相对}位置信息（基于三角函数的和差化积特性）。
 
-\subsection{2. 可学习编码 (Learned Embedding)}
-直接为每个位置初始化一个可训练的向量 $W_{pos}$。BERT 和 GPT-2 使用此方法。
-\textbf{局限}：无法外推，序列长度受限于训练时的最大长度。
+\textbf{设计动机：为什么选正余弦？}
+\begin{itemize}
+    \item \textbf{相对距离建模}：根据三角函数的和差化积公式，对于任何固定的偏移 $k$，$PE_{pos+k}$ 可以表示为 $PE_{pos}$ 的线性函数。这使得模型能更容易学习到词与词之间的固定的相对距离。
+    \item \textbf{多尺度表达}：不同维度 $i$ 对应不同的波长，从 $2\pi$ 到 $10000 \cdot 2\pi$。这就像用时钟的秒针、分针、时针来共同表示一个精确的时间点，使得模型能够同时捕捉短程和长程的依赖。
+\end{itemize}
 
-\section{相对位置编码 (Relative PE)}
-关注词与词之间的\textbf{距离}，而非绝对位置。
+\textbf{注入机制：它是如何生效的？}
+当我们将词嵌入 $E$ 与位置编码 $P$ 相加进行 Self-Attention 计算时，点积项拆解为：
+$$ (E_i + P_i)(E_j + P_j)^\top = \underbrace{E_i E_j^\top}_{内容-内容} + \underbrace{E_i P_j^\top}_{内容-位置} + \underbrace{P_i E_j^\top}_{位置-内容} + \underbrace{P_i P_j^\top}_{位置-位置} $$
+这意味着位置信息参与了注意力权重的分配，使得 Query 能够根据“我在第 3 位，我要找第 1 位的东西”这种逻辑进行匹配。
 
-\subsection{1. Shaw's RPE}
-将位置偏置项直接加到 Attention Score 的计算中：$e_{ij} = \frac{x_i W^Q (x_j W^K + w_{ij}^K)^T}{\sqrt{d_k}}$。其中 $w_{ij}^K$ 是学到的相对位移向量。
+\subsection{可学习编码 (Learned Embedding)}
+直接为每个位置初始化一个可训练的向量 $W_{pos}$。BERT 使用此方法。
+\textbf{局限}：训练时见过的最大长度是 $L$，推理时如果遇到 $L+1$ 处的位置索引，模型将无法处理（外推性差）。
 
-\subsection{2. Transformer-XL}
-针对长序列，通过将位置信息从词嵌入中解耦，并引入可变偏置，实现了对极长上下文的支持。
+\section{旋转位置嵌入 (RoPE)}
+\textbf{现代 LLM (LLaMA, GLM) 的标配}。其核心是通过在复数空间进行旋转来编码位置。
 
-\section{旋转位置嵌入 (RoPE, Rotary PE)}
-\textbf{LLaMA, PaLM 的核心}。其核心思想是通过在复数空间进行旋转来编码位置：
-$$ f(q, m) = q \cdot e^{im\theta} $$
-对于二维向量 $(q_1, q_2)$，位置 $m$ 的变换为：
-$$ \begin{pmatrix} q'_1 \\ q'_2 \end{pmatrix} = \begin{pmatrix} \cos m\theta & -\sin m\theta \\ \sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} q_1 \\ q_2 \end{pmatrix} $$
-\textbf{核心优势}：1. 具有良好的相对位置一致性；2. \textbf{支持长度外推}（可以通过插值法如 PI 或 YaRN 扩展上下文长度）。
+\textbf{设计动机：相对位置的一致性}
+我们希望找到一个函数 $f(x, m)$，使得两个向量点积的结果只依赖于它们的相对距离 $m-n$：
+$$ \langle f(q, m), f(k, n) \rangle = g(q, k, m-n) $$
+\textbf{数学实现}：对第 $m$ 个位置的向量在第 $i$ 对维度上乘以旋转矩阵：
+$$ f(q, m) = \begin{pmatrix} \cos m\theta & -\sin m\theta \\ \sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} q_{2i} \\ q_{2i+1} \end{pmatrix} $$
+\textbf{注入机制：旋转即位置}
+由于旋转变换是正交变换，不改变向量的模长，但改变了两个向量之间的夹角。词与词之间的距离越远，旋转的角度差异越大，点积之后的结果就体现出了相对距离。
 
 \section{线性偏置注意力 (ALiBi)}
-Press 等人 (2021) 提出不再修改 Embedding，而是在计算 Attention Score 时加入一个线性衰减的偏置：
+Press 等人 (2021) 提出不再修改 Embedding，而是在注意力分数矩阵上直接叠加偏置。
+
+\textbf{设计动机：极致的外推性}
 $$ Attention(q_i, k_j) = \text{Softmax}(q_i k_j^T - m \cdot |i - j|) $$
-其中 $m$ 是为每个头分配的固定斜率。
-\textbf{优势}：不需要显式位置编码，模型在更长序列上表现极其稳健，支持大幅外推。
+\textbf{注入机制}：对于距离越远的词，人为地施加一个惩罚项。这种设计比模型自己去“学”长程规律要稳健得多。即使推理长度是训练长度的 10 倍，模型依然能保持基本性能，因为它不再依赖于绝对的位置索引。
 
-\section{总结与对比表}
-
+\section{总结对比：如何选择？}
 \begin{table}[h!]
 \centering
-\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\begin{tabularx}{\textwidth}{|l|X|X|}
 \hline
-\textbf{类型} & \textbf{代表模型} & \textbf{外推性} & \textbf{主要特点} \\
+\textbf{方案} & \textbf{注入方式} & \textbf{核心能力} \\
 \hline
-Learned & BERT, GPT-2 & 无 & 简单直观，但长度受限。 \\
+Sinusoidal & 加法融合 (Additive) & 相对距离建模能力。 \\
 \hline
-Sinusoidal & Transformer & 弱 & 数学建模，训练推断一致。 \\
+RoPE & 乘法旋转 (Multiplicative) & \textbf{外推性强}，保留语义相关性。 \\
 \hline
-RoPE & LLaMA, GLM & 强 (可通过插值) & \textbf{目前的主流}，保留绝对与相对。 \\
-\hline
-ALiBi & Bloom, MPT & 极强 & 简单高效，无需 PE 缓存。 \\
+ALiBi & 偏置干预 (Bias) & \textbf{外推性极强}，内存占用低。 \\
 \hline
 \end{tabularx}
 \end{table}
 
-\section{关键代码片段 (RoPE 简化实现)}
+\section{代码片段 (Sinusoidal 构造逻辑)}
 \begin{lstlisting}
 import torch
+import math
 
-def apply_rotary_emb(x, cos, sin):
-    # x: [batch, heads, seq_len, dim]
-    # 假设维度 dim=2 方便理解
-    x1, x2 = x[..., 0::2], x[..., 1::2]
-    # 旋转矩阵逻辑实现
-    out = torch.cat([x1 * cos - x2 * sin, x1 * sin + x2 * cos], dim=-1)
-    return out
-
-# 推理时：根据位置索引采样 precomputed 的 cos/sin 值
+def get_sinusoidal_pe(seq_len, d_model):
+    pe = torch.zeros(seq_len, d_model)
+    position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
+    div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+    # 为何这样写？e^(-i * log(10000)/d) = 10000^(-i/d)
+    pe[:, 0::2] = torch.sin(position * div_term)
+    pe[:, 1::2] = torch.cos(position * div_term)
+    return pe
 \end{lstlisting}
 
 \section{深度面试题}
-\textbf{问：为什么 RoPE 在当前 LLM 中最受欢迎？}\\
-答：因为它完美结合了“绝对位置的确定性”和“相对位置的平滑性”。更重要的是，由于其旋转特性的数学性质，RoPE 在进行 Context window 扩展时，通过简单的线性插值（Position Interpolation）就能取得极佳效果，极具工程价值。
+\textbf{问：为什么 Transformer 论文中说加法融合（$E+P$）不会破坏语义？}\\
+答：因为词向量空间是非稠密的超高维空间。相加可以理解为在词向量中注入了一个“位置指向”的偏置，由于维数极高，这种加法操作在大数定律下类似于在词向量中保留了一个独立的通道来存储位置信息，后续的权重矩阵 $W^Q, W^K$ 在学习过程中会自动解析这两部分内容。
 
 \end{document}
