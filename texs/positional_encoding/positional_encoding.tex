@@ -1,0 +1,106 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：位置编码深度解析 (Positional Encoding)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心背景：置换不变性}
+\textbf{问题定义}：Self-Attention 机制本质上是加权和操作，对序列的顺序不敏感（置换不变性）。如果直接将词嵌入丢进 Transformer，模型将无法区分 "I love coding" 和 "coding love I"。因此必须显式地向模型注入位置信息。
+
+\section{绝对位置编码 (Absolute PE)}
+将每个位置 $pos$ 映射为一个唯一的向量。
+
+\subsection{1. 正余弦固定编码 (Sinusoidal)}
+Vaswani 等人 (2017) 提出利用不同频率的正余弦函数：
+$$ PE(pos, 2i) = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right), \quad PE(pos, 2i+1) = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right) $$
+\textbf{优势}：允许模型通过线性变换学习\textbf{相对}位置信息（基于三角函数的和差化积特性）。
+
+\subsection{2. 可学习编码 (Learned Embedding)}
+直接为每个位置初始化一个可训练的向量 $W_{pos}$。BERT 和 GPT-2 使用此方法。
+\textbf{局限}：无法外推，序列长度受限于训练时的最大长度。
+
+\section{相对位置编码 (Relative PE)}
+关注词与词之间的\textbf{距离}，而非绝对位置。
+
+\subsection{1. Shaw's RPE}
+将位置偏置项直接加到 Attention Score 的计算中：$e_{ij} = \frac{x_i W^Q (x_j W^K + w_{ij}^K)^T}{\sqrt{d_k}}$。其中 $w_{ij}^K$ 是学到的相对位移向量。
+
+\subsection{2. Transformer-XL}
+针对长序列，通过将位置信息从词嵌入中解耦，并引入可变偏置，实现了对极长上下文的支持。
+
+\section{旋转位置嵌入 (RoPE, Rotary PE)}
+\textbf{LLaMA, PaLM 的核心}。其核心思想是通过在复数空间进行旋转来编码位置：
+$$ f(q, m) = q \cdot e^{im\theta} $$
+对于二维向量 $(q_1, q_2)$，位置 $m$ 的变换为：
+$$ \begin{pmatrix} q'_1 \\ q'_2 \end{pmatrix} = \begin{pmatrix} \cos m\theta & -\sin m\theta \\ \sin m\theta & \cos m\theta \end{pmatrix} \begin{pmatrix} q_1 \\ q_2 \end{pmatrix} $$
+\textbf{核心优势}：1. 具有良好的相对位置一致性；2. \textbf{支持长度外推}（可以通过插值法如 PI 或 YaRN 扩展上下文长度）。
+
+\section{线性偏置注意力 (ALiBi)}
+Press 等人 (2021) 提出不再修改 Embedding，而是在计算 Attention Score 时加入一个线性衰减的偏置：
+$$ Attention(q_i, k_j) = \text{Softmax}(q_i k_j^T - m \cdot |i - j|) $$
+其中 $m$ 是为每个头分配的固定斜率。
+\textbf{优势}：不需要显式位置编码，模型在更长序列上表现极其稳健，支持大幅外推。
+
+\section{总结与对比表}
+
+\begin{table}[h!]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\textbf{类型} & \textbf{代表模型} & \textbf{外推性} & \textbf{主要特点} \\
+\hline
+Learned & BERT, GPT-2 & 无 & 简单直观，但长度受限。 \\
+\hline
+Sinusoidal & Transformer & 弱 & 数学建模，训练推断一致。 \\
+\hline
+RoPE & LLaMA, GLM & 强 (可通过插值) & \textbf{目前的主流}，保留绝对与相对。 \\
+\hline
+ALiBi & Bloom, MPT & 极强 & 简单高效，无需 PE 缓存。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (RoPE 简化实现)}
+\begin{lstlisting}
+import torch
+
+def apply_rotary_emb(x, cos, sin):
+    # x: [batch, heads, seq_len, dim]
+    # 假设维度 dim=2 方便理解
+    x1, x2 = x[..., 0::2], x[..., 1::2]
+    # 旋转矩阵逻辑实现
+    out = torch.cat([x1 * cos - x2 * sin, x1 * sin + x2 * cos], dim=-1)
+    return out
+
+# 推理时：根据位置索引采样 precomputed 的 cos/sin 值
+\end{lstlisting}
+
+\section{深度面试题}
+\textbf{问：为什么 RoPE 在当前 LLM 中最受欢迎？}\\
+答：因为它完美结合了“绝对位置的确定性”和“相对位置的平滑性”。更重要的是，由于其旋转特性的数学性质，RoPE 在进行 Context window 扩展时，通过简单的线性插值（Position Interpolation）就能取得极佳效果，极具工程价值。
+
+\end{document}

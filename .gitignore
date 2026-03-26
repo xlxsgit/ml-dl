@@ -1,0 +1,6 @@
+
+.DS_Store
+texput.log
+.venv/
+__pycache__/
+

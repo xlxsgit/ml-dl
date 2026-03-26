@@ -1,0 +1,144 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：循环神经网络 (RNN)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：循环神经网络（Recurrent Neural Network, RNN）是一类用于处理序列数据（如文本、时间序列、音频）的神经网络。与传统前馈网络不同，RNN 在层间引入了反馈循环，使得模型能够保留并利用历史信息。
+
+\textbf{英文定义}：Recurrent Neural Networks (RNNs) are a class of neural networks designed for processing sequential data. Unlike feedforward networks, RNNs feature feedback loops, allowing them to maintain an internal state (memory) to process sequences of volatile length.
+
+\textbf{核心价值}：
+RNN 的核心在于\textbf{参数共享}。在序列的每一个时间步，模型都使用相同的权重矩阵来处理输入，这使得模型能够处理任意长度的序列。
+
+\section{核心原理与常用变体}
+
+\subsection{1. Vanilla RNN (基础循环网络)}
+在每个时间步 $t$，隐藏状态 $h_t$ 的更新公式为：
+$$ h_t = \sigma(W_{hh} h_{t-1} + W_{xh} x_t + b_h) $$
+其中 $x_t$ 是当前输入，$h_{t-1}$ 是上一时刻的记忆。
+\textbf{致命缺陷}：难以处理长距离依赖。在反向传播时，长期梯度会涉及多次权重矩阵相乘，导致\textbf{梯度消失}或\textbf{梯度爆炸}。
+
+\subsection{2. LSTM (Long Short-Term Memory)}
+通过引入\textbf{门控机制}（Gate Mechanism）解决长期依赖问题。
+\begin{enumerate}
+    \item \textbf{遗忘门} ($f_t$)：决定丢弃多少旧记忆。
+    \item \textbf{输入门} ($i_t$)：决定存入多少新信息。
+    \item \textbf{输出门} ($o_t$)：决定输出多少当前状态。
+    \item \textbf{细胞状态} ($C_t$)：贯穿所有时间步的“主干线”，梯度可在此平滑流动。
+\end{enumerate}
+
+\subsection{3. GRU (Gated Recurrent Unit)}
+LSTM 的简化版本，将遗忘门和输入门合并为\textbf{更新门} ($z_t$)，并将细胞状态与隐藏状态合并。计算开销更小，在中小规模数据集上表现常优于 LSTM。
+
+\section{典型架构示意图}
+RNN 的展开（Unrolling）结构如下：
+\begin{verbatim}
+      [ h_t-1 ]      [ h_t ]      [ h_t+1 ]
+          ^              ^            ^
+          |              |            |
+(W_hh) -> [ Cell ] ----> [ Cell ] --> [ Cell ] -> (W_hh)
+          ^              ^            ^
+          |              |            |
+      [ x_t-1 ]      [ x_t ]      [ x_t+1 ]
+\end{verbatim}
+
+\section{数学推导：BPTT 算法}
+RNN 的训练算法称为\textbf{随时间反向传播（BPTT）}。总损失 $L$ 是各时刻损失之和。对于权重 $W_{hh}$ 的梯度：
+$$ \frac{\partial L}{\partial W_{hh}} = \sum_{t=1}^T \frac{\partial L_t}{\partial W_{hh}} $$
+在计算 $\frac{\partial L_t}{\partial W_{hh}}$ 时，需要追溯到 $t, t-1, \dots, 1$ 时刻的所有状态，梯度项包含 $\prod_{k=1}^t \frac{\partial h_k}{\partial h_{k-1}}$。若权重矩阵特征值不等于 1，连乘会导致数值剧变。
+
+\section{关键代码片段 (PyTorch实现)}
+\begin{lstlisting}
+import torch
+import torch.nn as nn
+
+class RNNModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+        # input_size: 词向量维度, hidden_size: 记忆单元维度
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+        # 也可以替换为 nn.LSTM 或 nn.GRU
+        # self.rnn = nn.LSTM(input_size, hidden_size, batch_first=True)
+        
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        # x shape: (batch, seq_len, input_size)
+        # out: 包含所有时间步的隐藏状态 (batch, seq_len, hidden_size)
+        # hn: 最后一个时间步的隐藏状态 (1, batch, hidden_size)
+        out, hn = self.rnn(x)
+        
+        # 通常取最后一个时间步进行分类
+        last_out = out[:, -1, :]
+        return self.fc(last_out)
+\end{lstlisting}
+
+\section{深度面试题与解答}
+\subsection{基础概念}
+\textbf{问：RNN 为什么比全连接网络更适合处理文本？}\\
+答：文本具有时序相关性（前后的词有逻辑联系）。RNN 的循环结构允许信息在时间步之间传递，实现了“记忆”功能。此外，文本长度是不固定的，RNN 的参数共享机制允许它处理任意长度的序列输入。
+
+\subsection{进阶原理}
+\textbf{问：LSTM 为什么能缓解梯度消失？}\\
+答：因为 LSTM 引入了“细胞状态”路径，$C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$。在反向传播时，梯度在 $C_t$ 通道上主要是相加关系，而不是连乘关系。即便某些门关闭，梯度依然可以通过遗忘门路径较好地传回较远的时间步。
+
+\subsection{工程实战}
+\textbf{问：双向 RNN (Bi-RNN) 的原理是什么？}\\
+答：同时运行两个 RNN，一个从前向后（正向），一个从后向前（反向）。在每个时刻 $t$，将两者的隐藏状态拼接。这使得模型在预测当前词时，既能看到上文信息，也能看到下文信息。
+
+\subsection{坑点分析}
+\textbf{问：RNN 训练时最常见的数值问题是什么？如何解决？}\\
+答：\textbf{梯度爆炸}。表现为 Loss 突然变成 NaN。标准解决方法是使用\textbf{梯度裁剪（Gradient Clipping）}，即如果梯度的范数超过某个阈值，则对其进行等比例缩放，防止更新步长过大。
+
+\section{RNN vs Transformer}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特性} & \textbf{RNN (LSTM/GRU)} & \textbf{Transformer} \\
+\hline
+计算模式 & 串行（逐个单词处理） & 并行（一次性处理全句） \\
+\hline
+长程依赖 & 依赖记忆门（有上限） & 全局自注意力（无损） \\
+\hline
+硬件效率 & 较低（GPU 利用率受限） & 极高 \\
+\hline
+位置信息 & 隐式（结构决定顺序） & 显式（需加入位置编码） \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{LSTM 奠基论文}: Hochreiter, S., & Schmidhuber, J. (1997). \textit{Long short-term memory}. Neural Computation.
+    \item \textbf{GRU 论文}: Cho, K., et al. (2014). \textit{Learning Phrase Representations using RNN Encoder-Decoder}.
+    \item \textbf{深入浅出}: \textit{Understanding LSTMs} (Colah's blog, 最经典的博文)。
+\end{enumerate}
+
+\end{document}

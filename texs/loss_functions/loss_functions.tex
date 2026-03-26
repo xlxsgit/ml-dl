@@ -1,0 +1,142 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：损失函数 (Loss Functions)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：损失函数（Loss Function）是用于衡量模型预测值与真实标签之间差异的函数。它是深度学习优化过程的“指挥棒”，通过反向传播计算梯度，引导模型参数向减少误差的方向更新。
+
+\textbf{英文定义}：A Loss Function (or Objective Function) is a mathematical function that quantifies the difference between the predicted value and the ground truth. It serves as the objective for optimization, guiding the model parameters to minimize errors through gradient descent.
+
+\section{常用损失函数详解}
+
+\subsection{1. 均方误差 (MSE)}
+$$ L = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 $$
+\textbf{适用场景}：回归任务（如预测房价、坐标回归）。
+\textbf{特点}：对异常值（Outliers）非常敏感。
+
+\subsection{2. 二元交叉熵 (Binary Cross Entropy)}
+$$ L = -\frac{1}{n} \sum_{i=1}^n [y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i)] $$
+\textbf{适用场景}：二分类任务。要求输出 $\hat{y}_i \in [0, 1]$（通常配对 Sigmoid）。
+
+\subsection{3. 交叉熵 (Categorical Cross Entropy)}
+$$ L = -\sum_{c=1}^M y_{o,c} \log(p_{o,c}) $$
+\textbf{适用场景}：多分类任务。常与 Softmax 配合使用，衡量两个概率分布之间的距离。
+
+\subsection{4. KL 散度 (Kullback-Leibler Divergence)}
+$$ D_{KL}(P || Q) = \sum P(x) \log \frac{P(x)}{Q(x)} $$
+\textbf{适用场景}：衡量两个概率分布的差异。在 VAE 中用于规范化隐空间分布。
+
+\subsection{5. Smooth L1 损失 (Huber Loss)}
+当误差小时呈 L2（平方），误差大时呈 L1（线性）。
+\textbf{优点}：缓解了 MSE 对异常值的敏感，同时避免了 L1 在 0 点处不可导的问题。常用于目标检测中的边界框回归。
+
+\section{反向传播中的角色}
+参数更新公式为：$ W \leftarrow W - \eta \frac{\partial L}{\partial W} $。
+损失函数的导数直接决定了初次回传的梯度大小。如果 Loss 选错（例如二分类用 MSE），会导致函数饱和区梯度极小，模型无法收敛。
+
+\section{典型架构示意图}
+\begin{verbatim}
+[ 特征提取网络 ] --> [ 预测值 y_hat ] 
+                            |
+                            v
+[ 真实标签 y ] ------> [ 损失函数 L ] --> [ 计算梯度 dL/dy_hat ]
+                            |                   |
+                            +-------------------+
+                                     |
+                                     v
+                            [ 反向传播更新参数 ]
+\end{verbatim}
+
+\section{关键代码片段 (PyTorch实现)}
+\begin{lstlisting}
+import torch
+import torch.nn as nn
+
+# 1. 回归常用
+mse_loss = nn.MSELoss()
+
+# 2. 分类常用 (注意: CrossEntropyLoss 内部集成 LogSoftmax)
+# 预测值应为 Raw Logits
+ce_loss = nn.CrossEntropyLoss()
+
+# 3. 二分类
+# 如果输出已通过 Sigmoid:
+bce_loss = nn.BCELoss()
+# 如果输出是 Logits (推荐, 更数值稳定):
+bce_with_logits = nn.BCEWithLogitsLoss()
+
+# 使用示例
+logits = model(input)
+loss = ce_loss(logits, target)
+loss.backward()
+\end{lstlisting}
+
+\section{深度面试题与解答}
+\subsection{基础概念}
+\textbf{问：分类任务为什么通常用交叉熵而不是 MSE？}\\
+答：主要有两点：1. \textbf{学习效率}：交叉熵配合 Softmax 在反向传播时，梯度与预测误差成线性比例，即便误差很大也有强梯度；而 MSE 在分类问题中，输出层容易陷入饱和区，导致梯度消失。2. \textbf{概率意义}：交叉熵源于最大似然估计，更符合分布拟合的本质。
+
+\subsection{进阶原理}
+\textbf{问：Softmax + Cross-Entropy 的导数有什么优雅的形式？}\\
+答：设预测概率为 $p_i$，真实标签为 $y_i$（One-hot），其梯度简写为 $\frac{\partial L}{\partial z_i} = p_i - y_i$。即预测值与真实值的差，简洁且直观。
+
+\subsection{工程实战}
+\textbf{问：样本不均衡（Imbalanced Data）时该如何调整损失函数？}\\
+答：可以给不同类别设置权重（Weight），如 \texttt{nn.CrossEntropyLoss(weight=tensor)}。或者使用 \textbf{Focal Loss}，通过调整系数让模型更关注难分类的样本（Hard Examples）。
+
+\subsection{坑点分析}
+\textbf{问：L1 Loss 和 L2 Loss 分别有什么优缺点？}\\
+答：L2 (MSE) 下梯度随误差减小而减小，有利于收敛，但易受离群点干扰。L1 梯度恒定，对异常值稳健，但在 0 点不可导且在小误差下容易震荡。
+
+\section{损失函数对比总结表}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{函数} & \textbf{适用任务} & \textbf{主要优势} \\
+\hline
+MSE & 回归 & 凸函数，收敛平滑。 \\
+\hline
+Cross-Entropy & 分类 & 梯度传导快，信息论支持。 \\
+\hline
+Smooth L1 & 目标检测 & 稳健且在 0 附近平滑。 \\
+\hline
+Dice Loss & 语义分割 & 能够应对严重的类别不平衡。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{深度研究}: \textit{Deep Learning} (Ian Goodfellow) - Chapter 6.
+    \item \textbf{PyTorch 文档}: \texttt{torch.nn} 模块下的 Loss Functions 章节。
+    \item \textbf{进阶变体}: Lin, T. Y., et al. (2017). \textit{Focal Loss for Dense Object Detection}.
+\end{enumerate}
+
+\end{document}

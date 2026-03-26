@@ -1,0 +1,173 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：卷积神经网络 (CNN)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：卷积神经网络（Convolutional Neural Network, CNN）是一种专门用于处理具有网格结构数据（如图像、视频）的深度神经网络。它通过卷积运算提取局部特征，并利用参数共享和池化操作降低模型复杂度。
+
+\textbf{英文定义}：Convolutional Neural Networks (CNNs) are a class of deep neural networks specifically designed to process data with a grid-like topology (e.g., images). They extract spatial features through convolution operations and reduce complexity using parameter sharing and pooling.
+
+\textbf{提出时间与作者}：现代 CNN 的基础是由 Yann LeCun 等人在 1998 年提出的 LeNet-5 架构确立的。其爆发点是 2012 年 AlexNet 在 ImageNet 比赛中的巨大成功。
+
+\textbf{原始关键论文}：\textit{Gradient-Based Learning Applied to Document Recognition} (LeCun et al., 1998)
+
+\textbf{技术体系定位及历史演进}：
+CNN 起源于对生物视觉皮层的研究（感受野概念）。其演进历程经历了从早期的 LeNet 到深层的 VGG、残差连接的 ResNet、追求效率的 MobileNet，以及近期将注意力机制融入卷积的变体（如 ConvNeXt）。CNN 的核心价值在于将复杂的图像处理从繁琐的手工特征提取转向了自动化的多层表征学习。
+
+\section{核心原理与底层逻辑}
+CNN 的三大核心支柱是：\textbf{局部感受野（Local Receptive Fields）}、\textbf{权值共享（Shared Weights）}和\textbf{池化/下采样（Pooling）}。
+
+\subsection{数据流向简述}
+假定输入图像尺寸为 $(C, H, W)$（通道数、高度、宽度）。
+\begin{enumerate}
+    \item \textbf{卷积层}：使用多个大小为 $(C, k, k)$ 的卷积核在输入上滑动，执行点积运算得到特征图。
+    \item \textbf{非线性激活}：通常接 ReLU 函数，增强模型的非线性表达能力。
+    \item \textbf{池化层}：在特征图上进行最大值或平均值采样，减小空间维度 $(H, W)$，同时保持平移不变性。
+    \item \textbf{全连接层}：经过多轮“卷积+池化”后，将多维张量展平（Flatten）为向量，输出分类或回归结果。
+\end{enumerate}
+
+\subsection{算法执行步序}
+\begin{enumerate}
+    \item 准备输入图像阵列。
+    \item 应用卷积核执行互相关运算。
+    \item 加上偏置项（Bias）并执行激活函数。
+    \item 执行池化操作降低参数量。
+    \item 重复上述步骤提取高层抽象特征。
+    \item 最终特征送入全连接网络（MLP）进行预测。
+\end{enumerate}
+
+\section{严谨数学公式与推导}
+二维卷积运算的核心公式为：
+$$
+Y(i,j) = (X * K)(i,j) = \sum_{m=0}^{k-1} \sum_{n=0}^{k-1} X(i+m, j+n) \cdot K(m,n)
+$$
+\textbf{符号说明}：
+\begin{itemize}
+    \item $X$：输入特征图。
+    \item $K$：卷积核（Kernel），大小为 $k \times k$。
+    \item $Y$：输出特征图中的一点。
+\end{itemize}
+
+\textbf{输出尺寸计算公式（至关重要）}：
+若输入大小为 $W \times H$，卷积核为 $F \times F$，步长为 $S$，填充为 $P$，则输出宽度 $W_{out}$ 为：
+$$
+W_{out} = \left\lfloor \frac{W + 2P - F}{S} \right\rfloor + 1
+$$
+同理可得 $H_{out}$。
+
+\section{模型结构/架构示意图}
+典型的经典 CNN（如 LeNet 风格）架构如下：
+\begin{verbatim}
+[输入图像: 1x28x28]
+      |
+[ 5x5 Conv, 6 filters, Stride 1 ] --> (6x24x24)
+      |
+[ 2x2 MaxPool, Stride 2 ] ----------> (6x12x12)
+      |
+[ 5x5 Conv, 16 filters, Stride 1 ] -> (16x8x8)
+      |
+[ 2x2 MaxPool, Stride 2 ] ----------> (16x4x4)
+      |
+[ Flatten & Fully Connected ] ------> (120) -> (84)
+      |
+[ Output Classifier ] --------------> (10)
+\end{verbatim}
+
+\section{关键代码片段 (PyTorch实现)}
+以下为使用 PyTorch 定义一个基础 CNN 模块的示例：
+
+\begin{lstlisting}
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleCNN(nn.Module):
+    def __init__(self, num_classes=10):
+        super(SimpleCNN, self).__init__()
+        # 卷积层: 输入通道1, 输出通道16, 卷积核3x3, 填充1
+        # 输入:(B, 1, 28, 28) -> 输出:(B, 16, 28, 28)
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
+        
+        # 池化层: 2x2 窗口, 步长2
+        # 输入:(B, 16, 28, 28) -> 输出:(B, 16, 14, 14)
+        self.pool = nn.MaxPool2d(2, 2)
+        
+        # 全连接层
+        self.fc = nn.Linear(16 * 14 * 14, num_classes)
+
+    def forward(self, x):
+        # x: (B, 1, 28, 28)
+        x = self.pool(F.relu(self.conv1(x))) # 卷积 -> 激活 -> 池化
+        x = x.view(x.size(0), -1)           # 展平
+        x = self.fc(x)                      # 分类
+        return x
+\end{lstlisting}
+
+\section{深度面试题与解答}
+\subsection{基础概念}
+\textbf{问：CNN 相比普通的全连接神经网络有什么优势？}\\
+答：主要有三点：1. \textbf{参数共享}（卷积核在全图移动使用同一组权重），极大减少了参数量；2. \textbf{局部连接}（每个神经元只看局部像素），符合视觉处理逻辑并提取空间特征；3. \textbf{平移不变性}（通过池化实现），图像中物体移动一小段距离不影响识别。
+
+\subsection{进阶原理}
+\textbf{问：1x1 卷积核的具体作用是什么？}\\
+答：1x1 卷积不改变空间尺寸（H, W），但主要用于：1. \textbf{通道升降维}（控制计算负载，如 Inception 的 Bottleneck）；2. \textbf{跨通道信息融合}（让不同通道的特征进行组合）；3. \textbf{在不增加感受野的前提下增加非线性层}。
+
+\subsection{工程实战}
+\textbf{问：空洞卷积（Dilated Convolution）解决了什么问题？}\\
+答：它通过在卷积核元素间插入“洞”来扩大感受野，关键优势是在\textbf{不增加参数量}且\textbf{不损失空间分辨率}（不使用下采样）的情况下，捕获更远距离的信息，常用于图像分割任务。
+
+\subsection{坑点分析}
+\textbf{问：池化层虽然好用，但为什么有些现代架构（如 ResNet）倾向于减少池化的使用？}\\
+答：池化会带来不可逆的信息损失。现代常用“步长为 2 的卷积”代替池化来实现下采样。这样模型可以学习如何去下采样，而不是暴力丢弃（池化）像素，在保留细微空间特征上表现更好。
+
+\section{优缺点与适用场景}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{维度} & \textbf{分析} \\
+\hline
+\textbf{优势} & 自动且高效的特征提取；强大的空间表征能力；模型参数量由于共享权重而高度精简。 \\
+\hline
+\textbf{局限} & 难以处理非网格数据（如社交网络图）；对物体的旋转、缩放敏感度较高（除非做大量增强）。 \\
+\hline
+\textbf{最佳适用场景} & CV 领域几乎所有任务（识别、检测、分割）；音频频谱处理；视频分析。 \\
+\hline
+\textbf{替代方案} & 极致长跨度依赖任务使用 Transformer；非结构化图数据使用 GNN。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{里程碑论文}: Krizhevsky, A., et al. (2012). \textit{ImageNet classification with deep convolutional neural networks}. (AlexNet)
+    \item \textbf{必备课程}: CS231n: Convolutional Neural Networks for Visual Recognition (Stanford).
+    \item \textbf{变体探索}: He, K., et al. (2016). \textit{Deep Residual Learning for Image Recognition}. (ResNet)
+\end{enumerate}
+
+\end{document}

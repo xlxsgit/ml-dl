@@ -1,0 +1,171 @@
+\contentsline {chapter}{\numberline {1}Activation\_functions}{7}{chapter.1}%
+\contentsline {section}{\numberline {1.1}核心定义}{2}{section.1.1}%
+\contentsline {section}{\numberline {1.2}核心原理与常用函数}{2}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}1. Sigmoid 函数}{2}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}2. Tanh 函数 (双曲正切)}{2}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}3. ReLU (Rectified Linear Unit)}{2}{subsection.1.2.3}%
+\contentsline {subsection}{\numberline {1.2.4}4. Leaky ReLU}{3}{subsection.1.2.4}%
+\contentsline {subsection}{\numberline {1.2.5}5. GELU (Gaussian Error Linear Unit)}{3}{subsection.1.2.5}%
+\contentsline {section}{\numberline {1.3}严谨数学公式与导数推导}{3}{section.1.3}%
+\contentsline {section}{\numberline {1.4}模型结构中的位置}{3}{section.1.4}%
+\contentsline {section}{\numberline {1.5}关键代码片段 (PyTorch实现)}{3}{section.1.5}%
+\contentsline {section}{\numberline {1.6}深度面试题与解答}{4}{section.1.6}%
+\contentsline {subsection}{\numberline {1.6.1}基础概念}{4}{subsection.1.6.1}%
+\contentsline {subsection}{\numberline {1.6.2}进阶原理}{4}{subsection.1.6.2}%
+\contentsline {subsection}{\numberline {1.6.3}工程实战}{4}{subsection.1.6.3}%
+\contentsline {subsection}{\numberline {1.6.4}坑点分析}{4}{subsection.1.6.4}%
+\contentsline {section}{\numberline {1.7}优缺点对比表}{5}{section.1.7}%
+\contentsline {section}{\numberline {1.8}参考文献与拓展}{5}{section.1.8}%
+\contentsline {chapter}{\numberline {2}Cnn}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}核心定义}{7}{section.2.1}%
+\contentsline {section}{\numberline {2.2}核心原理与底层逻辑}{7}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}数据流向简述}{7}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}算法执行步序}{8}{subsection.2.2.2}%
+\contentsline {section}{\numberline {2.3}严谨数学公式与推导}{8}{section.2.3}%
+\contentsline {section}{\numberline {2.4}模型结构/架构示意图}{9}{section.2.4}%
+\contentsline {section}{\numberline {2.5}关键代码片段 (PyTorch实现)}{9}{section.2.5}%
+\contentsline {section}{\numberline {2.6}深度面试题与解答}{10}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}基础概念}{10}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}进阶原理}{10}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.3}工程实战}{10}{subsection.2.6.3}%
+\contentsline {subsection}{\numberline {2.6.4}坑点分析}{10}{subsection.2.6.4}%
+\contentsline {section}{\numberline {2.7}优缺点与适用场景}{11}{section.2.7}%
+\contentsline {section}{\numberline {2.8}参考文献与拓展}{11}{section.2.8}%
+\contentsline {chapter}{\numberline {3}Diffusion}{13}{chapter.3}%
+\contentsline {section}{\numberline {3.1}核心定义}{13}{section.3.1}%
+\contentsline {section}{\numberline {3.2}核心原理：前向与反向过程}{13}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}1. 前向过程 (Forward Diffusion)}{13}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}2. 反向过程 (Reverse Denoising)}{14}{subsection.3.2.2}%
+\contentsline {section}{\numberline {3.3}训练目标函数}{14}{section.3.3}%
+\contentsline {section}{\numberline {3.4}模型结构：时间敏感型 U-Net}{14}{section.3.4}%
+\contentsline {section}{\numberline {3.5}关键代码片段 (PyTorch简化实现)}{14}{section.3.5}%
+\contentsline {section}{\numberline {3.6}深度面试题与解答}{15}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}基础概念}{15}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}进阶原理}{15}{subsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.6.3}工程实战}{15}{subsection.3.6.3}%
+\contentsline {subsection}{\numberline {3.6.4}坑点分析}{16}{subsection.3.6.4}%
+\contentsline {section}{\numberline {3.7}生成模型横向对比表}{16}{section.3.7}%
+\contentsline {section}{\numberline {3.8}参考文献与拓展}{16}{section.3.8}%
+\contentsline {chapter}{\numberline {4}Gan}{17}{chapter.4}%
+\contentsline {section}{\numberline {4.1}核心定义}{17}{section.4.1}%
+\contentsline {section}{\numberline {4.2}核心原理：零和博弈}{17}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}1. 目标函数}{17}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}2. 训练过程}{18}{subsection.4.2.2}%
+\contentsline {section}{\numberline {4.3}模型结构示意图}{18}{section.4.3}%
+\contentsline {section}{\numberline {4.4}关键代码片段 (PyTorch实现)}{18}{section.4.4}%
+\contentsline {section}{\numberline {4.5}深度面试题与解答}{19}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}基础概念}{19}{subsection.4.5.1}%
+\contentsline {subsection}{\numberline {4.5.2}进阶原理}{19}{subsection.4.5.2}%
+\contentsline {subsection}{\numberline {4.5.3}工程实战}{19}{subsection.4.5.3}%
+\contentsline {subsection}{\numberline {4.5.4}坑点分析}{19}{subsection.4.5.4}%
+\contentsline {section}{\numberline {4.6}GAN 变体对比表}{20}{section.4.6}%
+\contentsline {section}{\numberline {4.7}参考文献与拓展}{20}{section.4.7}%
+\contentsline {chapter}{\numberline {5}Information\_theory}{21}{chapter.5}%
+\contentsline {section}{\numberline {5.1}核心定义}{21}{section.5.1}%
+\contentsline {section}{\numberline {5.2}核心衡量指标}{21}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}1. 自信息 (Self-Information)}{21}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}2. 信息熵 (Entropy)}{21}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}3. 相对熵 / KL 散度 (Relative Entropy / KL Divergence)}{22}{subsection.5.2.3}%
+\contentsline {subsection}{\numberline {5.2.4}4. 交叉熵 (Cross-Entropy)}{22}{subsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.2.5}5. 互信息 (Mutual Information)}{22}{subsection.5.2.5}%
+\contentsline {section}{\numberline {5.3}信息论与深度学习的关系}{22}{section.5.3}%
+\contentsline {section}{\numberline {5.4}概念逻辑关系图}{22}{section.5.4}%
+\contentsline {section}{\numberline {5.5}代码片段 (熵与 KL 散度计算)}{23}{section.5.5}%
+\contentsline {section}{\numberline {5.6}深度面试题与解答}{23}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}基础概念}{23}{subsection.5.6.1}%
+\contentsline {subsection}{\numberline {5.6.2}进阶原理}{23}{subsection.5.6.2}%
+\contentsline {subsection}{\numberline {5.6.3}工程实战}{23}{subsection.5.6.3}%
+\contentsline {section}{\numberline {5.7}指标对比总结表}{24}{section.5.7}%
+\contentsline {section}{\numberline {5.8}参考文献与拓展}{24}{section.5.8}%
+\contentsline {chapter}{\numberline {6}Loss\_functions}{25}{chapter.6}%
+\contentsline {section}{\numberline {6.1}核心定义}{25}{section.6.1}%
+\contentsline {section}{\numberline {6.2}常用损失函数详解}{25}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}1. 均方误差 (MSE)}{25}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}2. 二元交叉熵 (Binary Cross Entropy)}{25}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}3. 交叉熵 (Categorical Cross Entropy)}{26}{subsection.6.2.3}%
+\contentsline {subsection}{\numberline {6.2.4}4. KL 散度 (Kullback-Leibler Divergence)}{26}{subsection.6.2.4}%
+\contentsline {subsection}{\numberline {6.2.5}5. Smooth L1 损失 (Huber Loss)}{26}{subsection.6.2.5}%
+\contentsline {section}{\numberline {6.3}反向传播中的角色}{26}{section.6.3}%
+\contentsline {section}{\numberline {6.4}典型架构示意图}{26}{section.6.4}%
+\contentsline {section}{\numberline {6.5}关键代码片段 (PyTorch实现)}{26}{section.6.5}%
+\contentsline {section}{\numberline {6.6}深度面试题与解答}{27}{section.6.6}%
+\contentsline {subsection}{\numberline {6.6.1}基础概念}{27}{subsection.6.6.1}%
+\contentsline {subsection}{\numberline {6.6.2}进阶原理}{27}{subsection.6.6.2}%
+\contentsline {subsection}{\numberline {6.6.3}工程实战}{28}{subsection.6.6.3}%
+\contentsline {subsection}{\numberline {6.6.4}坑点分析}{28}{subsection.6.6.4}%
+\contentsline {section}{\numberline {6.7}损失函数对比总结表}{28}{section.6.7}%
+\contentsline {section}{\numberline {6.8}参考文献与拓展}{28}{section.6.8}%
+\contentsline {chapter}{\numberline {7}Mlp}{29}{chapter.7}%
+\contentsline {section}{\numberline {7.1}核心定义}{29}{section.7.1}%
+\contentsline {section}{\numberline {7.2}核心原理与计算过程}{29}{section.7.2}%
+\contentsline {subsection}{\numberline {7.2.1}1. 层级结构}{29}{subsection.7.2.1}%
+\contentsline {subsection}{\numberline {7.2.2}2. 计算公式}{29}{subsection.7.2.2}%
+\contentsline {subsection}{\numberline {7.2.3}3. 通用近似定理 (Universal Approximation Theorem)}{30}{subsection.7.2.3}%
+\contentsline {section}{\numberline {7.3}模型结构示意图}{30}{section.7.3}%
+\contentsline {section}{\numberline {7.4}关键代码片段 (PyTorch实现)}{30}{section.7.4}%
+\contentsline {section}{\numberline {7.5}深度面试题与解答}{31}{section.7.5}%
+\contentsline {subsection}{\numberline {7.5.1}基础概念}{31}{subsection.7.5.1}%
+\contentsline {subsection}{\numberline {7.5.2}进阶原理}{31}{subsection.7.5.2}%
+\contentsline {subsection}{\numberline {7.5.3}工程实战}{31}{subsection.7.5.3}%
+\contentsline {subsection}{\numberline {7.5.4}坑点分析}{31}{subsection.7.5.4}%
+\contentsline {section}{\numberline {7.6}MLP 与其他模型对比表}{31}{section.7.6}%
+\contentsline {section}{\numberline {7.7}参考文献与拓展}{32}{section.7.7}%
+\contentsline {chapter}{\numberline {8}Positional\_encoding}{33}{chapter.8}%
+\contentsline {section}{\numberline {8.1}核心背景：置换不变性}{33}{section.8.1}%
+\contentsline {section}{\numberline {8.2}绝对位置编码 (Absolute PE)}{33}{section.8.2}%
+\contentsline {subsection}{\numberline {8.2.1}1. 正余弦固定编码 (Sinusoidal)}{33}{subsection.8.2.1}%
+\contentsline {subsection}{\numberline {8.2.2}2. 可学习编码 (Learned Embedding)}{33}{subsection.8.2.2}%
+\contentsline {section}{\numberline {8.3}相对位置编码 (Relative PE)}{33}{section.8.3}%
+\contentsline {subsection}{\numberline {8.3.1}1. Shaw's RPE}{34}{subsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.3.2}2. Transformer-XL}{34}{subsection.8.3.2}%
+\contentsline {section}{\numberline {8.4}旋转位置嵌入 (RoPE, Rotary PE)}{34}{section.8.4}%
+\contentsline {section}{\numberline {8.5}线性偏置注意力 (ALiBi)}{34}{section.8.5}%
+\contentsline {section}{\numberline {8.6}总结与对比表}{34}{section.8.6}%
+\contentsline {section}{\numberline {8.7}关键代码片段 (RoPE 简化实现)}{35}{section.8.7}%
+\contentsline {section}{\numberline {8.8}深度面试题}{35}{section.8.8}%
+\contentsline {chapter}{\numberline {9}Rnn}{37}{chapter.9}%
+\contentsline {section}{\numberline {9.1}核心定义}{37}{section.9.1}%
+\contentsline {section}{\numberline {9.2}核心原理与常用变体}{37}{section.9.2}%
+\contentsline {subsection}{\numberline {9.2.1}1. Vanilla RNN (基础循环网络)}{37}{subsection.9.2.1}%
+\contentsline {subsection}{\numberline {9.2.2}2. LSTM (Long Short-Term Memory)}{37}{subsection.9.2.2}%
+\contentsline {subsection}{\numberline {9.2.3}3. GRU (Gated Recurrent Unit)}{38}{subsection.9.2.3}%
+\contentsline {section}{\numberline {9.3}典型架构示意图}{38}{section.9.3}%
+\contentsline {section}{\numberline {9.4}数学推导：BPTT 算法}{38}{section.9.4}%
+\contentsline {section}{\numberline {9.5}关键代码片段 (PyTorch实现)}{38}{section.9.5}%
+\contentsline {section}{\numberline {9.6}深度面试题与解答}{39}{section.9.6}%
+\contentsline {subsection}{\numberline {9.6.1}基础概念}{39}{subsection.9.6.1}%
+\contentsline {subsection}{\numberline {9.6.2}进阶原理}{39}{subsection.9.6.2}%
+\contentsline {subsection}{\numberline {9.6.3}工程实战}{39}{subsection.9.6.3}%
+\contentsline {subsection}{\numberline {9.6.4}坑点分析}{40}{subsection.9.6.4}%
+\contentsline {section}{\numberline {9.7}RNN vs Transformer}{40}{section.9.7}%
+\contentsline {section}{\numberline {9.8}参考文献与拓展}{40}{section.9.8}%
+\contentsline {chapter}{\numberline {10}Transformer}{41}{chapter.10}%
+\contentsline {section}{\numberline {10.1}核心定义}{41}{section.10.1}%
+\contentsline {section}{\numberline {10.2}核心原理与底层逻辑}{41}{section.10.2}%
+\contentsline {subsection}{\numberline {10.2.1}数据流向简述}{41}{subsection.10.2.1}%
+\contentsline {subsection}{\numberline {10.2.2}算法执行步序}{42}{subsection.10.2.2}%
+\contentsline {section}{\numberline {10.3}严谨数学公式与推导}{42}{section.10.3}%
+\contentsline {section}{\numberline {10.4}模型结构/架构示意图}{43}{section.10.4}%
+\contentsline {section}{\numberline {10.5}关键代码片段 (PyTorch实现)}{43}{section.10.5}%
+\contentsline {section}{\numberline {10.6}深度面试题与解答}{45}{section.10.6}%
+\contentsline {subsection}{\numberline {10.6.1}基础概念}{45}{subsection.10.6.1}%
+\contentsline {subsection}{\numberline {10.6.2}进阶原理}{45}{subsection.10.6.2}%
+\contentsline {subsection}{\numberline {10.6.3}工程实战}{45}{subsection.10.6.3}%
+\contentsline {subsection}{\numberline {10.6.4}坑点分析}{46}{subsection.10.6.4}%
+\contentsline {section}{\numberline {10.7}优缺点与适用场景}{46}{section.10.7}%
+\contentsline {section}{\numberline {10.8}参考文献与拓展}{46}{section.10.8}%
+\contentsline {chapter}{\numberline {11}Vae}{47}{chapter.11}%
+\contentsline {section}{\numberline {11.1}核心定义}{47}{section.11.1}%
+\contentsline {section}{\numberline {11.2}核心原理：潜在空间参数化}{47}{section.11.2}%
+\contentsline {subsection}{\numberline {11.2.1}1. 结构组成}{47}{subsection.11.2.1}%
+\contentsline {subsection}{\numberline {11.2.2}2. 重参数化技巧 (Reparameterization Trick)}{47}{subsection.11.2.2}%
+\contentsline {section}{\numberline {11.3}损失函数：ELBO}{48}{section.11.3}%
+\contentsline {section}{\numberline {11.4}模型结构示意图}{48}{section.11.4}%
+\contentsline {section}{\numberline {11.5}关键代码片段 (PyTorch实现)}{48}{section.11.5}%
+\contentsline {section}{\numberline {11.6}深度面试题与解答}{49}{section.11.6}%
+\contentsline {subsection}{\numberline {11.6.1}基础概念}{49}{subsection.11.6.1}%
+\contentsline {subsection}{\numberline {11.6.2}进阶原理}{49}{subsection.11.6.2}%
+\contentsline {subsection}{\numberline {11.6.3}工程实战}{49}{subsection.11.6.3}%
+\contentsline {subsection}{\numberline {11.6.4}坑点分析}{50}{subsection.11.6.4}%
+\contentsline {section}{\numberline {11.7}AE vs VAE 对比表}{50}{section.11.7}%
+\contentsline {section}{\numberline {11.8}参考文献与拓展}{50}{section.11.8}%

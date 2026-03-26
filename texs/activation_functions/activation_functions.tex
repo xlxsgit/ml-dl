@@ -1,0 +1,145 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：激活函数 (Activation Functions)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：激活函数是人工神经网络中负责将线性组合结果映射为非线性输出的数学函数。它决定了神经元是否被“激活”以及信号传递的程度，是神经网络具备模拟复杂非线性逻辑能力的关键。
+
+\textbf{英文定义}：An activation function is a mathematical function that maps the linear combination of inputs to a non-linear output in an artificial neural network. It determines whether and to what extent a neuron should be "activated," enabling the network to learn complex non-linear patterns.
+
+\textbf{为什么需要非线性？}：
+根据\textbf{通用近似定理 (Universal Approximation Theorem)}，若没有非线性激活函数，无论神经网络有多少层，其最终输出始终是输入的线性组合（相当于单层感知机），无法拟合复杂的现实数据。
+
+\section{核心原理与常用函数}
+
+\subsection{1. Sigmoid 函数}
+$$ \sigma(x) = \frac{1}{1 + e^{-x}} $$
+\textbf{特点}：输出范围 $(0, 1)$，常用于二分类输出层。
+\textbf{缺点}：存在\textbf{梯度消失}问题（当 $x$ 很大或很小时，梯度接近 0）；输出不以 0 为中心，导致收敛慢。
+
+\subsection{2. Tanh 函数 (双曲正切)}
+$$ \text{tanh}(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} $$
+\textbf{特点}：输出范围 $(-1, 1)$，以 0 为中心，收敛通常比 Sigmoid 快。
+\textbf{缺点}：依然存在梯度消失问题。
+
+\subsection{3. ReLU (Rectified Linear Unit)}
+$$ f(x) = \max(0, x) $$
+\textbf{特点}：计算简单，有效缓解了正向区域的梯度消失，是目前 CNN 中的事实标准。
+\textbf{缺点}：\textbf{Dead ReLU} 问题（导数为 0 的神经元可能永远无法更新）。
+
+\subsection{4. Leaky ReLU}
+$$ f(x) = \max(ax, x), \quad 0 < a < 1 $$
+\textbf{特点}：解决了 Dead ReLU 问题，给负半轴分配一个微小的斜率。
+
+\subsection{5. GELU (Gaussian Error Linear Unit)}
+$$ f(x) = x \cdot \Phi(x) = x \cdot \frac{1}{2} [1 + \text{erf}(x/\sqrt{2})] $$
+\textbf{特点}：引入了随机正则化思想，输出更平滑，是 Transformer (BERT, GPT) 的标配。
+
+\section{严谨数学公式与导数推导}
+在反向传播中，激活函数的导数决定了梯度传递的速度：
+
+\begin{itemize}
+    \item \textbf{Sigmoid 导数}：$\sigma'(x) = \sigma(x)(1 - \sigma(x))$。其最大值为 0.25。
+    \item \textbf{ReLU 导数}：$\begin{cases} 1 & x > 0 \\ 0 & x < 0 \end{cases}$。
+    \item \textbf{GELU 导数}：其导数不具有简单的闭式解，但其平滑特性使得模型在训练初期更稳定。
+\end{itemize}
+
+\section{模型结构中的位置}
+激活函数通常紧跟在“权重加权和 (\text{Weight Sum})”之后：
+\begin{verbatim}
+[ 输入 X ] --> [ W * X + b ] --> [ 激活函数 f ] --> [ 输出 a ]
+\end{verbatim}
+
+\section{关键代码片段 (PyTorch实现)}
+\begin{lstlisting}
+import torch
+import torch.nn as nn
+
+# 1. 函数式接口
+x = torch.randn(2, 2)
+output_relu = torch.relu(x)
+
+# 2. 模块化定义
+model = nn.Sequential(
+    nn.Linear(10, 20),
+    nn.ReLU(),       # 基础非线性
+    nn.Linear(20, 5),
+    nn.LeakyReLU(0.01), # 解决 Dead ReLU
+    nn.GELU(),       # Transformer 常用
+    nn.Softmax(dim=-1)  # 多分类概率输出
+)
+\end{lstlisting}
+
+\section{深度面试题与解答}
+\subsection{基础概念}
+\textbf{问：为什么非线性激活函数对深度学习至关重要？}\\
+答：因为线性算子（矩阵乘法）具有结合律。多层线性层的叠加 $W_2(W_1 x)$ 等价于单个线性层 $W_{total} x$。没有激活函数，深度模型将退化为线性回归。
+
+\subsection{进阶原理}
+\textbf{问：ReLU 为什么能解决梯度消失问题？}\\
+答：在 $x > 0$ 的区域，ReLU 的导数恒为 1。这意味着梯度在反向传播经过该神经元时不会被缩减，不仅计算极快，而且允许训练非常深的网络。
+
+\subsection{工程实战}
+\textbf{问：如何选择激活函数？}\\
+答：经验法则是：
+1. 隐藏层优先使用 \textbf{ReLU} 或其变体（Leaky ReLU/ELU）。
+2. Transformer 架构优先选 \textbf{GELU}。
+3. 二分类输出层用 \textbf{Sigmoid}，多分类用 \textbf{Softmax}。
+4. 回归任务输出层通常不加激活函数。
+
+\subsection{坑点分析}
+\textbf{问：Softmax 和 Sigmoid 在损失计算上有什么配合细节？}\\
+答：在 PyTorch 中，使用 \texttt{CrossEntropyLoss} 时，内部已经继承了 \texttt{LogSoftmax}。因此在定义网络模型时，最后一层输出层\textbf{不应}手动添加 Softmax，否则会重复计算导致性能下降或数值不稳定。
+
+\section{优缺点对比表}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|c|X|X|}
+\hline
+\textbf{函数} & \textbf{范围} & \textbf{主要优势} & \textbf{关键缺陷} \\
+\hline
+Sigmoid & (0, 1) & 概率解释性强 & 容易梯度消失，非零中心 \\
+\hline
+Tanh & (-1, 1) & 零中心输出 & 依然有梯度消失问题 \\
+\hline
+ReLU & [0, +$\infty$) & 计算极快，缓解梯度消失 & Dead ReLU (神经元“死亡”) \\
+\hline
+GELU & (-0.17, +$\infty$) & 性能优异，平滑度高 & 计算量略大于 ReLU \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{经典文献}: Glorot, X., et al. (2011). \textit{Deep Sparse Rectifier Neural Networks}. (ReLU 论文)
+    \item \textbf{GELU 论文}: Hendrycks, D., & Gimpel, K. (2016). \textit{Gaussian Error Linear Units (GELUs)}.
+    \item \textbf{CS231n}: Activation Functions and Their Performance Comparison (Stanford University).
+\end{enumerate}
+
+\end{document}

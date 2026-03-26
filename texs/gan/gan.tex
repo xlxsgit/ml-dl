@@ -1,0 +1,143 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：生成对抗网络 (GAN)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：生成对抗网络（Generative Adversarial Network, GAN）是一种通过对抗训练学习数据分布的深度学习架构。它由生成器（Generator）和判别器（Discriminator）组成，两者在相互博弈中共同进化：生成器学习制造逼真数据，判别器学习分辨真伪。
+
+\textbf{英文定义}：Generative Adversarial Networks (GANs) are a framework for training generative models based on a game-theoretic scenario. It consists of two networks: a Generator that learns to produce realistic data and a Discriminator that learns to distinguish between real and generated samples.
+
+\textbf{提出时间与作者}：2014年，由 Ian Goodfellow 等人提出。
+
+\textbf{原始关键论文}：\textit{Generative Adversarial Nets} (NIPS 2014)
+
+\section{核心原理：零和博弈}
+GAN 的核心在于其独特的目标函数，定义为一个\textbf{极小极大博弈 (Minimax Game)}。
+
+\subsection{1. 目标函数}
+$$ \min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))] $$
+\textbf{符号说明}：
+\begin{itemize}
+    \item $D(x)$：判别器，输出 $x$ 来自真实数据的概率。
+    \item $G(z)$：生成器，将随机噪声 $z$ 映射到数据空间。
+    \item $\max_D$：判别器希望最大化准确率（真实样本输出近 1，生成样本输出近 0）。
+    \item $\min_G$：生成器希望最小化判别器的判断力（使得生成样本让判别器输出近 1）。
+\end{itemize}
+
+\subsection{2. 训练过程}
+训练是一个交替进行的迭代过程：
+\begin{enumerate}
+    \item \textbf{固定 G，训练 D}：使判别器更强。
+    \item \textbf{固定 D，训练 G}：使生成器造出的图更像真的，从而“欺骗”判别器。
+    \item \textbf{纳什均衡}：理论上当 $p_g = p_{data}$ 时，判别器输出恒为 0.5，此时达到平衡。
+\end{enumerate}
+
+\section{模型结构示意图}
+\begin{verbatim}
+[ 随机噪声 z ] --> [ 生成器 G ] --> [ 生成样本 G(z) ] 
+                                          |
+                                          v
+      [ 真实样本 x ] ---------------> [ 判别器 D ] --> [ 分类: 真/假 ]
+\end{verbatim}
+
+\section{关键代码片段 (PyTorch实现)}
+以下为基础 GAN 的核心训练逻辑简化版：
+\begin{lstlisting}
+import torch
+import torch.nn as nn
+
+# 定义损失函数
+criterion = nn.BCELoss()
+
+# 1. 训练判别器 D
+# 真实数据 Loss
+outputs = D(real_images)
+d_loss_real = criterion(outputs, torch.ones_like(outputs))
+# 生成数据 Loss
+z = torch.randn(batch_size, latent_dim)
+fake_images = G(z)
+outputs = D(fake_images.detach()) # detach防止更新G
+d_loss_fake = criterion(outputs, torch.zeros_like(outputs))
+# 反向传播 D
+d_loss = d_loss_real + d_loss_fake
+d_optimizer.step()
+
+# 2. 训练生成器 G
+z = torch.randn(batch_size, latent_dim)
+fake_images = G(z)
+outputs = D(fake_images) # 重新通过最新的D
+# 目标：让 D 认为 fake 是 1 (真)
+g_loss = criterion(outputs, torch.ones_like(outputs))
+# 反向传播 G
+g_optimizer.step()
+\end{lstlisting}
+
+\section{深度面试题与解答}
+\subsection{基础概念}
+\textbf{问：为什么 GAN 的对抗博弈比普通网络更难训练？}\\
+答：因为 GAN 不是寻找损失函数的全局最小值，而是寻找两者的纳什均衡点点。如果 D 太强，G 的梯度会消失；如果 D 太弱，G 无法学到任何有用的分布。
+
+\subsection{进阶原理}
+\textbf{问：什么是模式崩溃 (Mode Collapse)？}\\
+答：指生成器由于发现判别器的某个漏洞，倾向于生成极少数甚至单一的、能够成功欺骗判别器的样本，而失去了数据分布的多样性（例如在 MNIST 上只生成数字 1）。
+
+\subsection{工程实战}
+\textbf{问：WGAN (Wasserstein GAN) 解决了什么核心问题？}\\
+答：解决了原生 GAN 使用 JS 散度在分布不重叠时梯度消失的问题。WGAN 使用 **EM距离 (Earth-Mover's distance)** 配合 **Lipschitz 连续性约束 (Weight Clipping)**，提供了更平滑的梯度映射。
+
+\subsection{坑点分析}
+\textbf{问：在评估 GAN 生成质量时，为什么不用训练集 Loss？}\\
+答：GAN 的 Loss 只能反映 D 与 G 的博弈进度，不能代表图像质量。常用 \textbf{FID (Fréchet Inception Distance)} 或 \textbf{Inception Score (IS)} 来定量评估图像的逼真度和多样性。
+
+\section{GAN 变体对比表}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{变体} & \textbf{核心改进} \\
+\hline
+\textbf{DCGAN} & 引入卷积神经网络（CNN）与 Batch Normalization，确立了工程基础。 \\
+\hline
+\textbf{WGAN / WGAN-GP} & 引入 Wasserstein 距离与梯度惩罚，极大提升了训练稳定性。 \\
+\hline
+\textbf{CycleGAN} & 实现了无需配对数据的跨域图像风格转换。 \\
+\hline
+\textbf{StyleGAN} & 引入解耦控制空间，实现了极高分辨率、可控细节的人脸生成。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{参考文献与拓展}
+\begin{enumerate}
+    \item \textbf{奠基论文}: Goodfellow, I., et al. (2014). \textit{Generative Adversarial Nets}. NIPS.
+    \item \textbf{工程标杆}: Radford, A., et al. (2015). \textit{Unsupervised Representation Learning with DCGAN}.
+    \item \textit{GAN Lab}: Google 提供的交互式 GAN 训练可视化工具。
+\end{enumerate}
+
+\end{document}
