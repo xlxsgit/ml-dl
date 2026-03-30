@@ -1,0 +1,118 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：概率论基础 (Probability Theory Foundations)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心对象}
+概率论是研究随机现象数量规律的数学分支。在机器学习中，它不仅用于建模数据的不确定性，还被用来推导损失函数（如极大似然估计）。
+\begin{itemize}
+    \item \textbf{随机变量 (Random Variable)}：其值随随机实验结果而定的变量，分为离散型（如掷骰子）和连续型（如身高）。
+    \item \textbf{概率密度函数 (PDF)}：连续型变量在某点附近的概率分布率。
+    \item \textbf{累积分布函数 (CDF)}：变量小于或等于某值的总概率。
+\end{itemize}
+
+\section{统计特征 (Statistics Moments)}
+
+\begin{itemize}
+    \item \textbf{期望 (Expectation)}：随机变量的平均值，记为 $E[X]$。对于连续型：$E[X] = \int x p(x) dx$。
+    \item \textbf{方差 (Variance)}：衡量其偏离均值的程度，$Var(X) = E[(X-E[X])^2]$。
+    \item \textbf{协方差 (Covariance)}：衡量两个变量的变化同步性，$Cov(X, Y) = E[(X-E[X])(Y-E[Y])]$。
+\end{itemize}
+
+\section{常见概率分布}
+
+\subsection{离散型分布}
+\begin{itemize}
+    \item \textbf{伯努利分布 (Bernoulli)}：单次二分类（如硬币）。
+    \item \textbf{二项分布 (Binomial)}：$n$ 次独立伯努利实验。
+    \item \textbf{多项式分布 (Multinomial)}：用于分类任务中的分类（One-hot 标签的生成逻辑）。
+\end{itemize}
+
+\subsection{连续型分布}
+\begin{itemize}
+    \item \textbf{高斯分布 (Gaussian / Normal)}：自然界最常见的分布。由均值 $\mu$ 和方差 $\sigma^2$ 确定。
+    \item \textbf{拉普拉斯分布 (Laplace)}：比高斯分布分布更尖锐，在 $L^1$ 正则化中有重要意义。
+\end{itemize}
+
+\section{贝叶斯公式与独立性}
+
+\subsection{条件概率}
+$$ P(A|B) = \frac{P(AB)}{P(B)} $$
+
+\subsection{贝叶斯公式 (Bayes' Theorem)}
+$$ P(A|B) = \frac{P(B|A) P(A)}{P(B)} $$
+\textbf{ML 应用}：它是最大后验概率估计 (MAP) 的核心理论。$P(A)$ 是先验，$P(B|A)$ 是似然，$P(A|B)$ 是我们想要更新后的后验知识。
+
+\section{信息论直观 (Information Theory)}
+\begin{itemize}
+    \item \textbf{熵 (Entropy)}：衡量信息的不确定性，$H(X) = - \sum p(x) \log p(x)$。
+    \item \textbf{KL 散度 (KL Divergence)}：衡量两个分布之间的差异。
+    \item \textbf{交叉熵 (Cross Entropy)}：分类任务中最常用的损失函数。
+\end{itemize}
+
+\section{中心极限定理 (Central Limit Theorem)}
+\textbf{核心内容}：大量相互独立的随机变量，其和的分布趋于正态分布。
+\\ \textbf{ML 意义}：解释了为什么我们通常假设噪声（误差）服从高斯分布。
+
+\section{极大似然估计 (MLE)}
+\textbf{思想}：根据观测到的样本，寻找使这些样本出现概率最大的参数值 $\theta$。
+\\ \textbf{公式}：$\hat{\theta} = \text{argmax}_\theta \sum \log P(x_i | \theta)$。
+
+\section{关键代码片段 (SciPy)}
+\begin{lstlisting}
+from scipy.stats import norm
+
+# 1. 产生正态分布对象
+dist = norm(loc=0, scale=1) # mean=0, std=1
+
+# 2. 计算 PDF (概率密度)
+p = dist.pdf(1.96)
+
+# 3. 计算 CDF (累积概率)
+prob = dist.cdf(1.96) # 约 0.975
+
+# 4. 生成随机抽样
+samples = dist.rvs(size=1000)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：极大似然估计 (MLE) 与最大后验概率估计 (MAP) 的区别是什么？}\\
+答：MLE 仅考虑数据（似然），认为参数 $\theta$ 是固定值。而 MAP 引入了参数的先验分布 $P(\theta)$（如认为权重服从高斯分布），这相当于在 MLE 的基础上增加了正则化项。
+
+\textbf{问：为什么要在神经网络中使用交叉熵而非均方误差 (MSE) 作为分类损失函数？}\\
+答：主要是为了解决“梯度消失”问题。在使用 Sigmoid 激活函数时，交叉熵的梯度具有简洁形式（$y-\hat{y}$），不包含激活函数的导数部分，从而避免了在输出接近 0 或 1 时的慢学习。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Ross, S. M. (2014). \textit{A First Course in Probability}. Pearson.
+    \item Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep Learning}. MIT Press (Chapter 3: Probability and Information Theory).
+    \item Jaynes, E. T. (2003). \textit{Probability Theory: The Logic of Science}. Cambridge University Press.
+\end{enumerate}
+
+\end{document}

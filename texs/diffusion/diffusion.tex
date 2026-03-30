@@ -37,14 +37,14 @@
 \section{核心原理：前向与反向过程}
 扩散模型的核心由两个互逆的过程组成：
 
-\subsection{1. 前向过程 (Forward Diffusion)}
+\subsection{前向过程 (Forward Diffusion)}
 将原始数据 $x_0$ 逐步转变为纯高斯噪声 $x_T$。每一步添加微小噪声：
 $$ q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t} x_{t-1}, \beta_t \mathbf{I}) $$
 利用重参数化技巧，可以直接从 $x_0$ 计算任意时刻的 $x_t$：
 $$ x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon, \quad \epsilon \sim \mathcal{N}(0, \mathbf{I}) $$
 其中 $\alpha_t = 1 - \beta_t$，$\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$。
 
-\subsection{2. 反向过程 (Reverse Denoising)}
+\subsection{反向过程 (Reverse Denoising)}
 模型学习预测噪声 $\epsilon_\theta(x_t, t)$，从而实现从 $x_t$ 到 $x_{t-1}$ 的逐步还原：
 $$ p_\theta(x_{t-1} | x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t)) $$
 

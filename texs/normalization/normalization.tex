@@ -1,0 +1,117 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：深度学习中的归一化方法 (Normalization Methods)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：归一化（Normalization）是深度学习中用于稳定训练过程、加速收敛的核心技术。它通过对神经元的激活值进行缩放和平移，将其分布调整到合理的范围内（通常是均值为 0，方差为 1），从而缓解梯度消失/爆炸并减少对初始化的敏感性。
+
+\textbf{英文定义}：Normalization is a core technique in deep learning to stabilize the training process and accelerate convergence. By scaling and shifting the activation values of neurons to a reasonable range (typically mean 0 and variance 1), it mitigates gradient vanishing/exploding and reduces sensitivity to initialization.
+
+\section{数学统一框架}
+对于一个输入向量 $x$，归一化的通用步骤为：
+\begin{enumerate}
+    \item \textbf{标准化}：$\hat{x} = \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}}$，其中 $\epsilon$ 为防止分母为 0 的极小值。
+    \item \textbf{仿射变换 (Scaling and Shifting)}：$y = \gamma \hat{x} + \beta$，其中 $\gamma$ 和 $\beta$ 为可学习参数（保证模型仍能表达原始分布）。
+\end{enumerate}
+
+\section{主流归一化方法对比}
+
+\subsection{Batch Normalization (BN)}
+\textbf{操作维度}：在 Batch 维度上计算均值和方差（针对每个通道）。
+\\ \textbf{优点}：引入正则化效果，允许更高的学习率。
+\\ \textbf{局限}：依赖 Batch Size（太小时极其不稳定），不适用于 RNN 以及变长序列。
+
+\subsection{Layer Normalization (LN)}
+\textbf{操作维度}：在一个样本的单层所有特征上进行归一化。
+\\ \textbf{优点}：不依赖 Batch Size，适用于 RNN 和 Transformer。
+\\ \textbf{应用}：NLP 领域的默认选择。
+
+\subsection{Instance Normalization (IN)}
+\textbf{操作维度}：在每个样本的每个通道内部进行归一化。
+\\ \textbf{应用}：图像风格迁移 (Style Transfer)，因为其能保留图像中固有的风格信息。
+
+\subsection{Group Normalization (GN)}
+\textbf{操作维度}：将通道 (Channel) 分成若干组，在每组内部归一化。
+\\ \textbf{优点}：是 BN 与 LN 的折中方案，完全不依赖 Batch Size，适用于小 Batch 下的视觉任务。
+
+\section{为什么归一化有效？}
+\begin{itemize}
+    \item \textbf{减少内部协变量偏移 (ICS)}：虽然对其真正机制有争议，但实验证明它能保持层间输出分布的稳定。
+    \item \textbf{平滑损失平面}：归一化使得优化空间更加圆润，减少了“峡谷”地带，使梯度下降更顺畅。
+    \item \textbf{权重缩放不变性}：防止权重爆炸导致的梯度溢出。
+\end{itemize}
+
+\section{关键总结表}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{方法} & \textbf{公式维度 ($N, C, H, W$)} & \textbf{核心场景} \\
+\hline
+BN & 跨 $N$ ($C$ 相同) & 卷积神经网络 (CNN) \\
+\hline
+LN & 跨 $C, H, W$ ($N$ 相同) & Transformer, RNN \\
+\hline
+IN & 跨 $H, W$ ($N, C$ 固定) & 风格迁移 \\
+\hline
+GN & 跨部分 $C, H, W$ & 小 Batch 视觉任务 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (PyTorch)}
+\begin{lstlisting}
+import torch.nn as nn
+
+# 1. Batch Norm (用于 CNN)
+bn = nn.BatchNorm2d(num_features=64)
+
+# 2. Layer Norm (用于 Transformer)
+ln = nn.LayerNorm(normalized_shape=[512])
+
+# 3. Group Norm (分离通道)
+gn = nn.GroupNorm(num_groups=32, num_channels=512)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：训练和推理时，Batch Normalization 的处理有何不同？}\\
+答：训练时，计算当前 Batch 的均值和方差，并更新全局运行时统计值（Moving Average）。推理时，直接使用记录的全局均值和方差，不再依赖推理时的 Batch 信息，从而保证预测的确定性。
+
+\textbf{问：为什么 Transformer 普遍使用 LN 而非 BN？}\\
+答：NLP 任务中序列长度是不定的，BN 在处理变长序列时难以统计全局方差。此外，LN 在小 Batch 下表现更稳健，且更符合词嵌入这类特征的物理结构（每个 token 的特征独立归一化更合理）。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Ioffe, S., \& Szegedy, C. (2015). \textit{Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift}. ICML.
+    \item Ba, J. L., et al. (2016). \textit{Layer Normalization}. arXiv.
+    \item Wu, Y., \& He, K. (2018). \textit{Group Normalization}. ECCV.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,114 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：核回归 (Kernel Regression)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：核回归是一种非参数统计方法，用于估计随机变量之间的依赖关系（回归函数）。它不预先假设回归函数的具体形式（如线性或指数），而是利用观测点周围的数据通过“核函数”加权平均来预测新点的输出值。
+
+\textbf{英文定义}：Kernel regression is a non-parametric statistical technique to estimate the conditional expectation of a random variable (the regression function). Instead of assuming a fixed functional form (like linear or exponential), it predicts the output of a new point by a weighted average of localized observations using a "kernel function."
+
+\section{Nadaraya-Watson 估计器}
+核回归最经典的形式是 Nadaraya-Watson 估计器。对于样本点集合 $\{(x_i, y_i)\}_{i=1}^n$，预测点 $x$ 的输出 $\hat{m}(x)$ 为：
+$$ \hat{m}(x) = \frac{\sum_{i=1}^n K_h(x - x_i) y_i}{\sum_{i=1}^n K_h(x - x_i)} $$
+其中 $K_h(u) = \frac{1}{h} K(\frac{u}{h})$ 是核函数，$h$ 是带宽 (Bandwidth)。
+\\ \textbf{直观理解}：预测值是附近样本响应值的加权平均，权重由核函数决定，距离越近权重越高。
+
+\section{常见核函数 (Kernel Functions)}
+常用的核函数需满足单元积分等于 1 且对称的性质：
+\begin{itemize}
+    \item \textbf{高斯核 (Gaussian)}：$K(u) = \frac{1}{\sqrt{2\pi}} \exp(-\frac{1}{2}u^2)$。全局平滑，最常用。
+    \item \textbf{Epanechnikov 核}：$K(u) = \frac{3}{4}(1-u^2) \cdot \mathbf{I}(|u| \le 1)$。在均方误差意义下是最优的。
+    \item \textbf{均匀核 (Uniform)}：$K(u) = \frac{1}{2} \cdot \mathbf{I}(|u| \le 1)$。等同于滑动窗口平均。
+\end{itemize}
+
+\section{带宽 $h$ 的影响 (Bias-Variance Tradeoff)}
+带宽是核回归中最重要的超参数：
+\begin{itemize}
+    \item \textbf{过小 ($h \to 0$)}：只关注极近的邻居。模型过拟合，方差极高，曲线呈锯齿状。
+    \item \textbf{过大 ($h \to \infty$)}：赋予所有样本几乎相同的权重。模型欠拟合，偏差极高，曲线过于平滑且脱离趋势。
+\end{itemize}
+通常通过 \textbf{交叉验证} (Leave-one-out Cross-Validation) 来确定最佳带宽。
+
+\section{局部线性回归 (Local Linear Regression)}
+\textbf{问题}：标准 NW 估计器在边界区域（Boundary Effects）和数据非均匀分布时存在较大偏差（如“边界收缩”现象）。
+\\ \textbf{改进}：不再简单求加权平均，而是在每个目标点 $x$ 附近拟合一个小型的线性模型：
+$$ \min_{\alpha, \beta} \sum_{i=1}^n K_h(x - x_i) [y_i - \alpha - \beta(x_i - x)]^2 $$
+局部线性回归能够有效纠正 NW 估计器在边界处的系统性偏差。
+
+\section{非参数 vs 参数回归}
+对比线性回归（参数化）：
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{维度} & \textbf{参数回归 (如线性)} & \textbf{核回归 (非参数)} \\
+\hline
+\textbf{模型形式} & 预先固定（如 $y=ax+b$） & 随数据自动调整 \\
+\hline
+\textbf{适用性} & 理论预测明确时效果好 & 处理复杂非线性关系 \\
+\hline
+\textbf{数据量需求} & 较小即可 & 需要较大数据量以保证局部稠密 \\
+\hline
+\textbf{计算开销} & 极低 & 较高（每次预测需遍历观测点） \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (Python)}
+\begin{lstlisting}
+from sklearn.neighbors import KernelDensity
+import numpy as np
+
+# 1. 虽然 sklearn 没有直接的 NW 回归，但可以用 KernelRidge(kernel='rbf') 模拟
+from sklearn.kernel_ridge import KernelRidge
+
+# 2. 设置参数：带宽对应于 gamma 参数（1 / 2h^2）
+model = KernelRidge(alpha=1.0, kernel='rbf', gamma=0.1)
+model.fit(X_train, y_train)
+
+# 3. 预测
+y_pred = model.predict(X_test)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：核回归是否适合极高维的数据？}\\
+答：不适合。在高维空间中，任何预测点与邻居的距离都会变得很远（维数灾难），导致核函数权重分布趋于均匀或极度稀疏，非参数估计的效率会迅速下降。
+
+\textbf{问：带宽 $h$ 的选择如何受数据样本量 $n$ 的影响？}\\
+答：根据理论，最优带宽一般以 $n^{-1/5}$ 的速度缩小。随着样本量增大，我们可以使用更小的带宽来捕捉更细腻的函数波动而不增加过多方差。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Nadaraya, E. A. (1964). \textit{On Estimating Regression}. Theory of Probability \& Its Applications.
+    \item Watson, G. S. (1964). \textit{Smooth Regression Analysis}. Sankhya: The Indian Journal of Statistics.
+    \item Wand, M. P., \& Jones, M. C. (1995). \textit{Kernel Smoothing}. Chapman \& Hall/CRC.
+\end{enumerate}
+
+\end{document}

@@ -34,24 +34,24 @@
 
 \section{常用损失函数详解}
 
-\subsection{1. 均方误差 (MSE)}
+\subsection{均方误差 (MSE)}
 $$ L = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 $$
 \textbf{适用场景}：回归任务（如预测房价、坐标回归）。
 \textbf{特点}：对异常值（Outliers）非常敏感。
 
-\subsection{2. 二元交叉熵 (Binary Cross Entropy)}
+\subsection{二元交叉熵 (Binary Cross Entropy)}
 $$ L = -\frac{1}{n} \sum_{i=1}^n [y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i)] $$
 \textbf{适用场景}：二分类任务。要求输出 $\hat{y}_i \in [0, 1]$（通常配对 Sigmoid）。
 
-\subsection{3. 交叉熵 (Categorical Cross Entropy)}
+\subsection{交叉熵 (Categorical Cross Entropy)}
 $$ L = -\sum_{c=1}^M y_{o,c} \log(p_{o,c}) $$
 \textbf{适用场景}：多分类任务。常与 Softmax 配合使用，衡量两个概率分布之间的距离。
 
-\subsection{4. KL 散度 (Kullback-Leibler Divergence)}
+\subsection{KL 散度 (Kullback-Leibler Divergence)}
 $$ D_{KL}(P || Q) = \sum P(x) \log \frac{P(x)}{Q(x)} $$
 \textbf{适用场景}：衡量两个概率分布的差异。在 VAE 中用于规范化隐空间分布。
 
-\subsection{5. Smooth L1 损失 (Huber Loss)}
+\subsection{Smooth L1 损失 (Huber Loss)}
 当误差小时呈 L2（平方），误差大时呈 L1（线性）。
 \textbf{优点}：缓解了 MSE 对异常值的敏感，同时避免了 L1 在 0 点处不可导的问题。常用于目标检测中的边界框回归。
 

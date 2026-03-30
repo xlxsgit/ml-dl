@@ -1,0 +1,178 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：线性回归、岭回归与 Lasso}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：线性回归（Linear Regression）是研究自变量 $X$ 与因变量 $y$ 之间线性相关关系的一种统计分析方法。其目标是寻找一组参数 $\beta$，使得预测值 $f(x) = \beta^\top x + b$ 与真实值 $y$ 的误差最小。当引入正则化项以处理过拟合或多重共线性时，演变为岭回归（Ridge）或 Lasso 回归。
+
+\textbf{英文定义}：Linear Regression is a statistical method for modeling the relationship between a dependent variable $y$ and one or more explanatory variables $X$. It aims to find the parameters $\beta$ that minimize the error between predictions and ground truth. Regularized variants include Ridge Regression (L2) and Lasso Regression (L1).
+
+\section{最小二乘法 (OLS) 的数学推导}
+
+\subsection{矩阵形式建模}
+设数据集为 $(X, y)$，其中 $X \in \mathbb{R}^{n \times (d+1)}$（已并入偏置项列），$y \in \mathbb{R}^n$。目标函数为平方损失（Mean Squared Error）：
+$$ J(\beta) = \|y - X\beta\|^2 = (y - X\beta)^\top (y - X\beta) $$
+
+\subsection{解析解求解}
+展开目标函数：
+$$ J(\beta) = y^\top y - y^\top X\beta - \beta^\top X^\top y + \beta^\top X^\top X \beta = y^\top y - 2\beta^\top X^\top y + \beta^\top X^\top X \beta $$
+对 $\beta$ 求导：
+$$ \frac{\partial J(\beta)}{\partial \beta} = -2X^\top y + 2X^\top X \beta = 0 $$
+若 $X^\top X$ 可逆，得\textbf{正规方程 (Normal Equation)} 的解：
+$$ \hat{\beta} = (X^\top X)^{-1} X^\top y $$
+
+\section{OLS 的统计性质与全面证明}
+
+在探讨性质前，需明确 \textbf{Gauss-Markov 假设}：
+\begin{enumerate}
+    \item \textbf{线性性}：模型为 $y = X\beta + \epsilon$。
+    \item \textbf{满秩性}：$\text{rank}(X) = d+1 < n$，确保 $X^\top X$ 可逆。
+    \item \textbf{外生性}：$E[\epsilon|X] = 0$（噪声均值为零且与特征无关）。
+    \item \textbf{同方差性}：$\text{Var}(\epsilon|X) = \sigma^2 I$（噪声方差恒定且相互独立）。
+\end{enumerate}
+
+\subsection{无偏性 (Unbiasedness) 的证明}
+\textbf{结论}：$E[\hat{\beta}] = \beta$。
+\\ \textbf{证明}：
+将 $y = X\beta + \epsilon$ 代入 $\hat{\beta}$ 的表达式：
+$$ \hat{\beta} = (X^\top X)^{-1} X^\top (X\beta + \epsilon) $$
+$$ \hat{\beta} = (X^\top X)^{-1} X^\top X \beta + (X^\top X)^{-1} X^\top \epsilon = \beta + (X^\top X)^{-1} X^\top \epsilon $$
+对 $\hat{\beta}$ 求期望（给定 $X$）：
+$$ E[\hat{\beta}|X] = E[\beta|X] + E[(X^\top X)^{-1} X^\top \epsilon | X] $$
+由于 $\beta$ 是常数且 $E[\epsilon|X] = 0$：
+$$ E[\hat{\beta}|X] = \beta + (X^\top X)^{-1} X^\top E[\epsilon|X] = \beta + 0 = \beta $$
+
+\subsection{方差 (Variance) 的证明}
+\textbf{结论}：$\text{Var}(\hat{\beta}) = \sigma^2 (X^\top X)^{-1}$。
+\\ \textbf{证明}：
+由无偏性可知 $\hat{\beta} - \beta = (X^\top X)^{-1} X^\top \epsilon$。方差定义为：
+$$ \text{Var}(\hat{\beta}|X) = E[(\hat{\beta}-\beta)(\hat{\beta}-\beta)^\top | X] $$
+$$ = E[((X^\top X)^{-1} X^\top \epsilon) ((X^\top X)^{-1} X^\top \epsilon)^\top | X] $$
+由于 $(AB)^\top = B^\top A^\top$ 且 $(X^\top X)^{-1}$ 是对称矩阵：
+$$ = E[(X^\top X)^{-1} X^\top \epsilon \epsilon^\top X (X^\top X)^{-1} | X] $$
+$$ = (X^\top X)^{-1} X^\top E[\epsilon \epsilon^\top | X] X (X^\top X)^{-1} $$
+由于 $E[\epsilon \epsilon^\top | X] = \sigma^2 I$：
+$$ = (X^\top X)^{-1} X^\top (\sigma^2 I) X (X^\top X)^{-1} = \sigma^2 (X^\top X)^{-1} X^\top X (X^\top X)^{-1} $$
+$$ = \sigma^2 (X^\top X)^{-1} $$
+
+\subsection{一致性 (Consistency) 的证明}
+\textbf{结论}：当 $n \to \infty$ 时，$\hat{\beta} \xrightarrow{p} \beta$。
+\\ \textbf{证明}：
+$$ \hat{\beta} = \beta + (X^\top X)^{-1} X^\top \epsilon = \beta + \left( \frac{1}{n} X^\top X \right)^{-1} \left( \frac{1}{n} X^\top \epsilon \right) $$
+根据大数定律（LLN）：
+\begin{itemize}
+    \item $\frac{1}{n} X^\top X \xrightarrow{p} Q$（其中 $Q$ 是特征的二阶矩矩阵，假设其正定）。
+    \item $\frac{1}{n} X^\top \epsilon \xrightarrow{p} E[x_i \epsilon_i] = 0$（由外生性假设）。
+\end{itemize}
+因此：$\text{plim} \, \hat{\beta} = \beta + Q^{-1} \cdot 0 = \beta$。
+
+\subsection{Gauss-Markov 定理 (BLUE)}
+在满足上述假设的情况下，OLS 估计量 $\hat{\beta}$ 是所有线性无偏估计量中方差最小的一个，即 \textbf{Best Linear Unbiased Estimator}。
+
+\section{岭回归 (Ridge Regression): L2 正则化}
+
+\subsection{目标函数}
+针对 $X^\top X$ 不满秩或存在多重共线性（特征高度相关）的情况，引入 L2 范数惩罚项：
+$$ J(\beta)_{Ridge} = \|y - X\beta\|^2 + \lambda \|\beta\|^2 $$
+
+\subsection{数学特性}
+解析解为：$\hat{\beta}_{Ridge} = (X^\top X + \lambda I)^{-1} X^\top y$。
+\begin{itemize}
+    \item \textbf{数值稳定性}：加上 $\lambda I$ 后，矩阵一定可逆，解决了奇异矩阵问题。
+    \item \textbf{收缩效应 (Shrinkage)}：$\lambda$ 越大，参数越趋近于 0，减少了模型的方差（Variance）但引入了偏差（Bias）。
+    \item \textbf{贝叶斯视角}：对应于参数服从\textbf{高斯分布}先验下的最大后验概率估计（MAP）。
+\end{itemize}
+
+\section{Lasso 回归: L1 正则化}
+
+\subsection{目标函数}
+引入 L1 范数惩罚项：
+$$ J(\beta)_{Lasso} = \|y - X\beta\|^2 + \lambda \|\beta\|_1 $$
+
+\subsection{稀疏性 (Sparsity) 的几何解释}
+Lasso 的约束空间是一个正方形/菱形（L1），而 Ridge 是圆形（L2）。损失函数的等高线与 L1 约束边界相交时，极大概念发生在角点（即某些坐标轴上），从而使部分 $\beta_j$ \textbf{精确为 0}。因此 Lasso 具有\textbf{特征选择}的功能。
+
+\subsection{统计特性}
+\begin{itemize}
+    \item \textbf{无解析解}：由于 L1 范数在原点不可导，通常采用坐标下降法（Coordinate Descent）求解。
+    \item \textbf{贝叶斯视角}：对应于参数服从\textbf{拉普拉斯分布}先验下的 MAP 估计。
+\end{itemize}
+
+\section{对比：OLS vs Ridge vs Lasso}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\textbf{特征} & \textbf{OLS} & \textbf{Ridge} & \textbf{Lasso} \\
+\hline
+\textbf{惩罚项} & 无 & $\lambda \sum \beta_j^2$ & $\lambda \sum |\beta_j|$ \\
+\hline
+\textbf{特征选择} & 否 & 否 (系数趋近 0) & \textbf{是} (系数可为 0) \\
+\hline
+\textbf{解析解} & 有 & 有 & 无 \\
+\hline
+\textbf{适用场景} & 数据量大且特征独立 & 处理多重共线性 & 稀疏特征筛选 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (Python)}
+\begin{lstlisting}
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.metrics import mean_squared_error
+
+# 初始化模型
+ols = LinearRegression()
+ridge = Ridge(alpha=1.0) # alpha 即 LaTeX 中的 lambda
+lasso = Lasso(alpha=0.1)
+
+# 训练与预测
+ols.fit(X_train, y_train)
+y_pred = ols.predict(X_test)
+
+print(f"OLS Coefficients: {ols.coef_}")
+print(f"Lasso Non-zero count: {(lasso.coef_ != 0).sum()}")
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：为什么 Lasso 能做特征选择而 Ridge 不行？}\\
+答：从几何角度看，Lasso 的等高线（约束域）是带尖角的凸多面体，最优解极易落在轴上；从优化角度看，L1 范数在 0 点的次梯度范围包含 0，使得最优解更可能被"推"到 0。
+
+\textbf{问：岭回归在什么时候比 OLS 更好？}\\
+答：当数据存在多重共线性（特征间线性相关）或特征维度 $d$ 接近甚至超过样本量 $n$ 时，OLS 估计量的方差会爆炸。岭回归通过引入小的偏差极大降低了方差，提升了测试集泛化能力。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Hoerl, A. E., \& Kennard, R. W. (1970). \textit{Ridge Regression: Biased Estimation for Nonorthogonal Problems}.
+    \item Tibshirani, R. (1996). \textit{Regression Shrinkage and Selection via the Lasso}. Sequential Analysis.
+    \item Hastie, T., et al. (2009). \textit{The Elements of Statistical Learning}.
+\end{enumerate}
+
+\end{document}

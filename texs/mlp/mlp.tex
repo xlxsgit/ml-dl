@@ -36,20 +36,20 @@
 
 \section{核心原理与计算过程}
 
-\subsection{1. 层级结构}
+\subsection{层级结构}
 \begin{itemize}
     \item \textbf{输入层}：接收原始特征向量 $x \in \mathbb{R}^d$。
     \item \textbf{隐藏层}：负责提取非线性特征。每个神经元执行：$a = \sigma(Wx + b)$。
     \item \textbf{输出层}：根据任务输出结果（如回归用线性，分类用 Softmax）。
 \end{itemize}
 
-\subsection{2. 计算公式}
+\subsection{计算公式}
 对于第 $l$ 层，其输出 $h^{(l)}$ 的计算公式为：
 $$ z^{(l)} = W^{(l)} h^{(l-1)} + b^{(l)} $$
 $$ h^{(l)} = \sigma(z^{(l)}) $$
 其中 $W^{(l)}$ 是权重矩阵，$b^{(l)}$ 是偏置项，$\sigma$ 是非线性激活函数。
 
-\subsection{3. 通用近似定理 (Universal Approximation Theorem)}
+\subsection{通用近似定理 (Universal Approximation Theorem)}
 该定理指出：一个拥有至少一个隐藏层（且包含足够多神经元）的前馈神经网络，只要配以合适的非线性激活函数，就可以以任意精度逼近闭区间上的任何连续函数。
 
 \section{模型结构示意图}

@@ -37,26 +37,26 @@
 
 \section{核心原理与常用函数}
 
-\subsection{1. Sigmoid 函数}
+\subsection{Sigmoid 函数}
 $$ \sigma(x) = \frac{1}{1 + e^{-x}} $$
 \textbf{特点}：输出范围 $(0, 1)$，常用于二分类输出层。
 \textbf{缺点}：存在\textbf{梯度消失}问题（当 $x$ 很大或很小时，梯度接近 0）；输出不以 0 为中心，导致收敛慢。
 
-\subsection{2. Tanh 函数 (双曲正切)}
+\subsection{Tanh 函数 (双曲正切)}
 $$ \text{tanh}(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} $$
 \textbf{特点}：输出范围 $(-1, 1)$，以 0 为中心，收敛通常比 Sigmoid 快。
 \textbf{缺点}：依然存在梯度消失问题。
 
-\subsection{3. ReLU (Rectified Linear Unit)}
+\subsection{ReLU (Rectified Linear Unit)}
 $$ f(x) = \max(0, x) $$
 \textbf{特点}：计算简单，有效缓解了正向区域的梯度消失，是目前 CNN 中的事实标准。
 \textbf{缺点}：\textbf{Dead ReLU} 问题（导数为 0 的神经元可能永远无法更新）。
 
-\subsection{4. Leaky ReLU}
+\subsection{Leaky ReLU}
 $$ f(x) = \max(ax, x), \quad 0 < a < 1 $$
 \textbf{特点}：解决了 Dead ReLU 问题，给负半轴分配一个微小的斜率。
 
-\subsection{5. GELU (Gaussian Error Linear Unit)}
+\subsection{GELU (Gaussian Error Linear Unit)}
 $$ f(x) = x \cdot \Phi(x) = x \cdot \frac{1}{2} [1 + \text{erf}(x/\sqrt{2})] $$
 \textbf{特点}：引入了随机正则化思想，输出更平滑，是 Transformer (BERT, GPT) 的标配。
 

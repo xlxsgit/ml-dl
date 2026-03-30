@@ -1,0 +1,121 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：参数估计 (Parameter Estimation)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：参数估计是推断统计学中的核心任务，旨在利用样本数据来估计总体分布中的未知参数。根据输出形式的不同，主要分为点估计（输出单一数值）和区间估计（输出一个置信区间）。
+
+\textbf{英文定义}：Parameter estimation is the process of using sample data to estimate the unknown parameters of a population distribution. It is categorized into point estimation (providing a single value) and interval estimation (providing a confidence interval).
+
+\section{点估计 (Point Estimation)}
+
+\subsection{极大似然估计 (MLE)}
+\textbf{核心思想}：寻找一组参数，使得已观测到的数据出现的概率（似然度）最大。
+\\ \textbf{步骤}：
+\begin{enumerate}
+    \item 写出似然函数 $L(\theta) = \prod_{i=1}^n f(x_i|\theta)$。
+    \item 取对数似然 $\ln L(\theta) = \sum_{i=1}^n \ln f(x_i|\theta)$。
+    \item 求导并令导数为零：$\frac{\partial \ln L(\theta)}{\partial \theta} = 0$。
+\end{enumerate}
+\textbf{示例}：正态分布 $\mu$ 的 MLE 是其样本均值 $\bar{x}$。
+
+\subsection{最大后验概率估计 (MAP)}
+\textbf{核心思想}：在 MLE 的基础上引入参数的先验分布，即求解 $P(\theta|X) \propto P(X|\theta)P(\theta)$。
+\\ \textbf{特性}：当样本量 $n \to \infty$ 时，MAP 趋近于 MLE。
+
+\subsection{矩估计 (Method of Moments)}
+\textbf{核心思想}：利用样本矩（如样本均值、样本方差）去估计相应的总体矩。虽然简单，但估计量可能并不具有最优统计性质。
+
+\section{估计量的评价标准}
+
+\begin{itemize}
+    \item \textbf{无偏性 (Unbiasedness)}：估计量的数学期望等于参数真值，$E[\hat{\theta}] = \theta$。
+    \item \textbf{有效性 (Efficiency)}：在所有无偏估计量中，方差最小的更好（CRLB 下界）。
+    \item \textbf{一致性 (Consistency)}：随着样本量 $n$ 的增加，估计量以概率收敛于真值。
+\end{itemize}
+
+\section{区间估计 (Interval Estimation)}
+\textbf{置信区间 (Confidence Interval)}：在一定的置信水平 $1-\alpha$ 下，参数落在该区间内的概率。
+\\ \textbf{正态分布均值区间}（已知 $\sigma$）：
+$$ \bar{x} \pm z_{\alpha/2} \frac{\sigma}{\sqrt{n}} $$
+如果 $\sigma$ 未知，则使用样本标准差 $s$ 和 $t$ 分布：
+$$ \bar{x} \pm t_{\alpha/2}(n-1) \frac{s}{\sqrt{n}} $$
+
+\section{MLE vs MAP}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{特征} & \textbf{MLE} & \textbf{MAP} \\
+\hline
+\textbf{哲学流派} & 频率派 (Frequentist) & 贝叶斯派 (Bayesian) \\
+\hline
+\textbf{先验知识} & 不考虑 & 考虑先验分布 $P(\theta)$ \\
+\hline
+\textbf{过拟合} & 样本较小时易过拟合 & 具有正则化效果，抑制过拟合 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (Python)}
+\begin{lstlisting}
+import numpy as np
+from scipy.stats import norm
+
+# 模拟数据
+data = np.random.normal(loc=5.0, scale=2.0, size=100)
+
+# 1. MLE 估计均值和标准差 (正态分布)
+mu_mle = np.mean(data)
+sigma_mle = np.std(data)
+
+# 2. 置信区间计算 (均值, 95% 置信度)
+conf_level = 0.95
+ci = norm.interval(conf_level, loc=mu_mle, scale=sigma_mle/np.sqrt(len(data)))
+
+print(f"MLE Mu: {mu_mle}")
+print(f"95% Confidence Interval: {ci}")
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：贝叶斯估计和 MLE 的根本区别是什么？}\\
+答：MLE 认为参数是一个固定的未知量，完全由数据决定。贝叶斯估计（如 MAP）认为参数本身也是一个随机变量，具有先验分布，通过数据（似然）来更新对参数的认知（后验）。
+
+\textbf{问：为什么样本方差的分母是 $n-1$ 而不是 $n$？}\\
+答：为了保证估计量的无偏性。如果分母是 $n$，其期望会比真实方差小 $\frac{1}{n}$，这种由于使用了样本均值替代总体均值而造成的系统性偏差称为贝塞尔修正（Bessel's Correction）。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Casella, G., \& Berger, R. L. (2002). \textit{Statistical Inference}. Duxbury.
+    \item Hogg, R. V., et al. (2018). \textit{Introduction to Mathematical Statistics}. Pearson.
+    \item Lehmann, E. L., \& Casella, G. (1998). \textit{Theory of Point Estimation}. Springer.
+\end{enumerate}
+
+\end{document}

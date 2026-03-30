@@ -1,0 +1,89 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：高等数学基础 (Calculus Foundations)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+高等数学（微积分）是机器学习优化算法的灵魂。它为我们提供了衡量函数变化率（导数）、寻找搜索方向（梯度）以及逼近复杂函数（泰勒展开）的严谨数学工具。在深度学习中，反向传播算法本质上就是链式法则的大规模应用。
+
+\section{导数与梯度 (Derivatives and Gradients)}
+
+\subsection{导数与偏导数}
+对于单变量函数 $f(x)$，导数 $f'(x)$ 定义为函数在某点的瞬时变化率。
+\\ 对于多变量函数 $f(x_1, x_2, \dots, x_n)$，\textbf{偏导数} $\frac{\partial f}{\partial x_i}$ 表示在固定其他变量不变时，函数对单一变量 $x_i$ 的变化率。
+
+\subsection{梯度 (Gradient)}
+\textbf{梯度}是一个向量，由函数对所有变量的偏导数组成：
+$$ \nabla f(\mathbf{x}) = \left[ \frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \dots, \frac{\partial f}{\partial x_n} \right]^T $$
+\textbf{物理意义}：梯度向量指向函数增长最快的方向，其模长代表增长率。梯度下降法正是沿着梯度的反方向（增长最慢/下降最快）进行搜索。
+
+\section{链式法则 (Chain Rule)}
+若 $y = f(u)$ 且 $u = g(x)$，则 $y$ 对 $x$ 的导数为：
+$$ \frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dx} $$
+\textbf{ML 应用}：在神经网络中，每一层的输出是下一层的输入。通过链式法则，我们可以从输出层的误差开始，逐层向前计算权重对损耗函数的贡献（即反向传播）。
+
+\section{黑塞矩阵 (Hessian Matrix)}
+\textbf{定义}：多变量函数的所有二阶偏导数组成的方阵：
+$$ \mathbf{H} = \left[ \frac{\partial^2 f}{\partial x_i \partial x_j} \right]_{n \times n} $$
+\textbf{作用}：
+\begin{itemize}
+    \item 描述损失平面的曲率（Curvature）。
+    \item 用于判断极值点：如果 $\mathbf{H}$ 是正定的，该点为局部极小值；如果是负定的，则为局部极大值。
+    \item 支持二阶优化算法（如牛顿法），利用曲率信息加速收敛。
+\end{itemize}
+
+\section{泰勒展开 (Taylor Expansion)}
+将复杂函数在某点 $a$ 附近展开为多项式：
+$$ f(x) \approx f(a) + f'(a)(x-a) + \frac{1}{2}f''(a)(x-a)^2 + \dots $$
+\textbf{ML 意义}：
+\begin{enumerate}
+    \item \textbf{一阶泰勒展开}：是梯度下降法的数学理论依据（局部线性逼近）。
+    \item \textbf{二阶泰勒展开}：是牛顿法的核心，通过二次函数模拟损失函数曲面。
+\end{enumerate}
+
+\section{雅可比矩阵 (Jacobian Matrix)}
+如果有一个向量函数 $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$，其雅可比矩阵包含了一阶偏导数的全部信息：
+$$ \mathbf{J} = \frac{\partial \mathbf{f}}{\partial \mathbf{x}} $$
+它是梯度概念在向量函数上的推广。
+
+\section{深度面试题}
+
+\textbf{问：为什么深度学习通常只用一阶导数（梯度）而不用二阶导数（Hessian）？}\\
+答：主要有两个原因：一、\textbf{计算开销}：对于拥有数亿参数的模型，存储和计算 $O(N^2)$ 的 Hessian 矩阵在算力上是不可接受的；二、\textbf{鞍点问题}：在高维空间中，二阶优化容易陷入广阔的鞍点（Saddle Point）区域，而一阶动量方法处理起来更具鲁棒性。
+
+\textbf{问：梯度消失和梯度爆炸在微积分层面如何理解？}\\
+答：本质上是由于“链式法则”的连乘效应。如果每一层的激活函数偏导数都小于 1，多层累乘后梯度会呈指数级衰减（消失）；由于偏导数大于 1 且参数较大，梯度则会呈指数级增长（爆炸）。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Stewart, J. (2015). \textit{Calculus: Early Transcendentals}. Cengage Learning.
+    \item Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep Learning}. MIT Press (Chapter 4: Numerical Computation).
+    \item Rudin, W. (1976). \textit{Principles of Mathematical Analysis}. McGraw-Hill.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,131 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：模型评价指标 (Evaluation Metrics)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：模型评价指标是衡量算法在特定数据集上表现好坏的数学尺度。不同的任务类型（分类、回归、生成等）和不同的业务需求（是否关心漏报、误报等）决定了评价指标的选择。
+
+\textbf{英文定义}：Evaluation metrics are mathematical measures used to assess how well an algorithm performs on a specific dataset. The choice of metrics is determined by the task type (classification, regression, generation, etc.) and business requirements (sensitivity to false negatives or false positives).
+
+\section{分类任务指标 (Classification)}
+
+\subsection{混淆矩阵 (Confusion Matrix)}
+\begin{itemize}
+    \item \textbf{TP (True Positive)}：正类预测为正。
+    \item \textbf{FP (False Positive)}：负类预测为正（误报）。
+    \item \textbf{FN (False Negative)}：正类预测为负（漏报）。
+    \item \textbf{TN (True Negative)}：负类预测为负。
+\end{itemize}
+
+\subsection{基础三剑客：Precision, Recall, F1}
+\begin{itemize}
+    \item \textbf{准确率 (Accuracy)}：预测正确的样本比例。$(TP+TN)/N$。
+    \item \textbf{精确率 (Precision)}：在预测为正的记录中，实际为正的比例。$TP/(TP+FP)$。
+    \item \textbf{召回率 (Recall / Sensitivity)}：在实际为正的记录中，被预测为正的比例。$TP/(TP+FN)$。
+    \item \textbf{F1-score}：精确率与召回率的调和平均，兼顾两者平衡。
+    $$ F1 = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall} $$
+\end{itemize}
+
+\subsection{ROC 曲线与 AUC 值}
+\begin{itemize}
+    \item \textbf{ROC 曲线}：横坐标为 FPR (假正类率)，纵坐标为 TPR (真正类率/召回率)。
+    \item \textbf{AUC}：ROC 曲线下的面积，反映模型对样本的排序能力，且对标签分布不平衡不敏感。
+\end{itemize}
+
+\subsection{多分类指标：Macro vs. Micro}
+\begin{itemize}
+    \item \textbf{Macro-F1}：先计算每一类的 F1，再求算术平均。平等看待所有类别。
+    \item \textbf{Micro-F1}：先汇总 TP、FP、FN 再计算全局 F1。倾向于占样本多数的类别。
+\end{itemize}
+
+\section{回归任务指标 (Regression)}
+
+\begin{itemize}
+    \item \textbf{MSE (Mean Squared Error)}：均方误差，对离群点（Outliers）非常敏感。
+    \item \textbf{MAE (Mean Absolute Error)}：平均绝对误差，对离群点比 MSE 更鲁棒。
+    \item \textbf{R-squared ($R^2$)}：决定系数，反映模型对数据变异性的解释程度。取值接近 1 表示模型拟合效果好。
+\end{itemize}
+
+\section{特定任务指标 (Specific Tasks)}
+
+\begin{itemize}
+    \item \textbf{目标检测 / 语义分割}：IoU (Intersection over Union)，衡量预测框与真实框的重合度。
+    \item \textbf{NLP 文本生成}：BLEU (Bilingual Evaluation Understudy)，基于 N-gram 的重合度。
+\end{itemize}
+
+\section{关键总结：指标选择逻辑}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{场景} & \textbf{建议指标} \\
+\hline
+数据类别严重不平衡 & \textbf{Recall}、\textbf{F1}、\textbf{PR 曲线}，而非 Accuracy。 \\
+\hline
+漏报代价极大（如疾病诊断） & 优先保证高 \textbf{Recall}。 \\
+\hline
+误报影响极差（如下架判定） & 优先保证高 \textbf{Precision}。 \\
+\hline
+对排序能力有要求 & 使用 \textbf{AUC}。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (Python)}
+\begin{lstlisting}
+from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score, r2_score
+
+# 1. 分类评估
+cm = confusion_matrix(y_true, y_pred)
+f1 = f1_score(y_true, y_pred, average='macro')
+auc = roc_auc_score(y_true, y_prob)
+
+# 2. 回归评估
+r2 = r2_score(y_true, y_pred)
+
+print(f"F1 (Macro): {f1}, AUC: {auc}")
+print(f"R2-Score: {r2}")
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：什么时候 PR 曲线比 ROC 曲线更能客观反映模型性能？}\\
+答：在正负样本比例极其悬殊的场景下。ROC 曲线会因为负样本极多而导致 FPR 变化缓慢，从而掩盖了 FP 的快速增长；而 PR 曲线直接关注精确率，能清晰展现出模型在正类预测上的可靠性。
+
+\textbf{问：$R^2$ 有可能为负吗？}\\
+答：有可能。如果模型预测的效果比直接取均值作为预测值（即水平线模型）还要差，则 $R^2 < 0$。这通常意味着模型选择了错误的结构或参数。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Fawcett, T. (2006). \textit{An Introduction to ROC Analysis}. Pattern Recognition Letters.
+    \item Sokolova, M., \& Lapalme, G. (2009). \textit{A Systematic Analysis of Performance Measures for Classification Tasks}. Information Processing Management.
+    \item Papineni, K., et al. (2002). \textit{BLEU: A Method for Automatic Evaluation of Machine Translation}. ACL.
+\end{enumerate}
+
+\end{document}

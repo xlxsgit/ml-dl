@@ -1,0 +1,107 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：广义线性模型 (Generalized Linear Model)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：广义线性模型（GLM）是经典线性回归模型的一种扩展。它通过引入“联系函数”和假设响应变量服从“指数族分布”，使得模型能够处理非正态分布的响应变量（如二项分布、泊松分布等），打破了传统线性模型必须满足正态性、齐方差性的限制。
+
+\textbf{英文定义}：Generalized Linear Model (GLM) is an extension of the ordinary linear regression model. By introducing a "link function" and assuming the response variable follows an "exponential family distribution," GLMs can handle non-normal response variables (e.g., Binomial, Poisson), overcoming the strict requirements of normality and homoscedasticity in traditional linear models.
+
+\section{GLM 的三大组成部分}
+一个完整的 GLM 模型由以下三个部分定义：
+\begin{itemize}
+    \item \textbf{随机分量 (Random Component)}：指响应变量 $Y$ 的概率分布。$Y$ 必须服从指数族分布（如高斯、二项、泊松、伽马、逆高斯分布）。
+    \item \textbf{系统分量 (Systematic Component)}：指自变量的线性组合 $\eta = X\beta$，即线性预测值。
+    \item \textbf{联系函数 (Link Function)}：一个单调可微函数 $g(\cdot)$，将响应变量的期望 $\mu = E[Y]$ 与线性预测值 $\eta$ 联系起来：
+    $$ g(\mu) = \eta = X\beta $$
+\end{itemize}
+
+\section{常见模型与联系函数}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|l|l|X|}
+\hline
+\textbf{模型} & \textbf{分布} & \textbf{典型联系函数} & \textbf{应用场景} \\
+\hline
+线性回归 & 高斯分布 & Identity: $\mu = \eta$ & 连续值预测 \\
+\hline
+逻辑回归 & 二项分布 & Logit: $\ln(\frac{\mu}{1-\mu}) = \eta$ & 二分类问题 \\
+\hline
+泊松回归 & 泊松分布 & Log: $\ln(\mu) = \eta$ & 单位时间/空间内的计数 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{指数族分布 (Exponential Family)}
+其概率密度函数通常可表示为：
+$$ f(y; \theta, \phi) = \exp\left( \frac{y\theta - b(\theta)}{a(\phi)} + c(y, \phi) \right) $$
+其中 $\theta$ 与均值有关，$\phi$ 是离散参数（如方差）。
+
+\section{参数估计与评估}
+\begin{itemize}
+    \item \textbf{估计方法}：常用 \textbf{极大似然估计 (MLE)}。由于方程通常是非线性的，通常采用 \textbf{迭代加权最小二乘法 (IRLS)} 或牛顿迭代法求解。
+    \item \textbf{评估指标}：
+        \begin{enumerate}
+            \item \textbf{偏差 (Deviance)}：衡量模型拟合度，越小越好。
+            \item \textbf{AIC / BIC}：考虑参数数量的惩罚项，用于模型筛选。
+        \end{enumerate}
+\end{itemize}
+
+\section{关键代码片段 (Statsmodels)}
+\begin{lstlisting}
+import statsmodels.api as sm
+
+# 1. 泊松回归示例 (计数数据)
+# 假设 y 为计数，X 为自变量
+glm_poisson = sm.GLM(y, X, family=sm.families.Poisson())
+res = glm_poisson.fit()
+
+# 2. 查看报告
+print(res.summary())
+
+# 3. 获取偏差与 AIC
+print(f"Deviance: {res.deviance}, AIC: {res.aic}")
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：逻辑回归 (Logistic Regression) 属于 GLM 吗？为什么？}\\
+答：属于。逻辑回归的响应变量服从二项分布（指数族分量），线性预测值为 $X\beta$（系统分量），且通过 Logit 函数（联系函数）将两者相连。
+
+\textbf{问：联系函数 $g(\mu)$ 与激活函数 (Activation Function) 有什么关系？}\\
+答：在广义线性模型中，回归形式为 $g(\mu) = X\beta$。而在机器学习习惯中，我们常写成 $\mu = g^{-1}(X\beta)$。这里的 $g^{-1}$（联系函数的逆）在神经网络语境下即为激活函数。例如，Logit 函数的逆正是 Sigmoid 函数。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Nelder, J. A., \& Wedderburn, R. W. (1972). \textit{Generalized Linear Models}. Journal of the Royal Statistical Society.
+    \item McCullagh, P., \& Nelder, J. A. (1989). \textit{Generalized Linear Models}. Chapman \& Hall/CRC.
+    \item Dobson, A. J., \& Barnett, A. G. (2018). \textit{An Introduction to Generalized Linear Models}. CRC Press.
+\end{enumerate}
+
+\end{document}

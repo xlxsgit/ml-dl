@@ -46,7 +46,7 @@ BERT 的输入不仅仅是词向量，而是三个层级的 Embedding 相加：
 
 \section{两大预训练任务}
 
-\subsection{1. MLM (Masked Language Model)}
+\subsection{MLM (Masked Language Model)}
 \textbf{完形填空}：随机遮盖输入序列中 $15\%$ 的 Token，让模型根据上下文预测被遮盖的词。
 \begin{itemize}
     \item $80\%$ 的概率替换为 \texttt{[MASK]}。
@@ -55,7 +55,7 @@ BERT 的输入不仅仅是词向量，而是三个层级的 Embedding 相加：
 \end{itemize}
 \textbf{目的}：强制编码器学习双向的词义信息，解决由于双向扫描可能带来的“信息泄露”问题。
 
-\subsection{2. NSP (Next Sentence Prediction)}
+\subsection{NSP (Next Sentence Prediction)}
 \textbf{下句预测}：给定句对 A 和 B，预测 B 是否是 A 的下一句。这是一个二分类任务。
 \begin{itemize}
     \item $50\%$ 的样本 B 是 A 的真下句（Label: IsNext）。

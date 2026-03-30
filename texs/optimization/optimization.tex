@@ -1,0 +1,127 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：模型优化方法 (Optimization Methods)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：模型优化是寻找一组最优模型参数 $\theta$，使得损失函数 $L(\theta)$ 达到最小值的过程。在机器学习中，这通常表现为一个高维、非凸的数学优化问题。
+
+\textbf{英文定义}：Model optimization is the process of finding a set of optimal parameters $\theta$ that minimize the loss function $L(\theta)$. In machine learning, this is typically formulated as a high-dimensional, non-convex mathematical optimization problem.
+
+\section{梯度下降基础 (Gradient Descent)}
+
+\subsection{基本形式}
+$$ \theta_{t+1} = \theta_t - \eta \cdot \nabla_{\theta} L(\theta_t) $$
+其中 $\eta$ 为学习率。
+
+\subsection{变体对比}
+\begin{itemize}
+    \item \textbf{BGD (Batch GD)}：利用全量样本计算梯度。收敛稳定但计算开销巨大。
+    \item \textbf{SGD (Stochastic GD)}：每次随机选取一个样本计算。更新频率快，但路径极其震荡，难以到达全局最优。
+    \item \textbf{MBGD (Mini-batch GD)}：折中方案。利用小批量（如 64, 128）数据计算。是目前深度学习的默认选择。
+\end{itemize}
+
+\section{动量与加速 (Momentum \& Nesterov)}
+
+\subsection{Momentum (动量法)}
+引入历史梯度的累积（动量 $v$），类似由于物理惯性冲过“峡谷”：
+$$ v_{t+1} = \gamma v_t + \eta \nabla L(\theta_t) $$
+$$ \theta_{t+1} = \theta_t - v_{t+1} $$
+\textbf{作用}：加速在正确方向上的搜索，抑制震荡。
+
+\subsection{NAG (Nesterov Accelerated Gradient)}
+在“超前”位置计算梯度。相比于标准动量法，它能提前感知坡度的变化从而适时“减速”，具有更好的鲁棒性。
+
+\section{自适应学习率 (Adaptive Methods)}
+
+\subsection{AdaGrad}
+根据梯度的二阶导数动态调整每个参数的学习率。
+\\ \textbf{局限}：分母中梯度的平方累加会导致学习率后期迅速萎缩至 0，导致训练提前停止。
+
+\subsection{RMSProp}
+引入指数加权移动平均（EWMA）来解决 AdaGrad 的萎缩问题，只关注最近一段时间的梯度。
+
+\subsection{Adam (Adaptive Moment Estimation)}
+结合了 \textbf{Momentum}（一阶矩估计）和 \textbf{RMSProp}（二阶矩估计）的优点：
+\begin{enumerate}
+    \item 计算梯度的一阶矩 $m$ 和二阶矩 $v$。
+    \item 进行偏置校正（修复初期权重为 0 的影响）。
+    \item 更新参数。
+\end{enumerate}
+\textbf{评价}：自适应能力强，超参数容易调节，是深度学习最推荐的“工业级”优化器。
+
+\section{AdamW 与权重衰减 (Weight Decay)}
+\textbf{背景}：研究发现 Adam 在结合 L2 正则化时，权重衰减效果不如 SGD。
+\\ \textbf{AdamW 改进}：将权重衰减项（Weight Decay）直接应用在参数更新公式上，而不是合并在梯度中计算。这使得模型具有更强的泛化能力。
+
+\section{评估指标：速度 vs. 收敛性}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{算法} & \textbf{收敛速度} & \textbf{泛化能力} \\
+\hline
+BGD & 极慢 & 较好（稳定） \\
+\hline
+SGD + Momentum & 中等 & \textbf{优秀}（常建议在 Adam 训练后期切换） \\
+\hline
+Adam & \textbf{极快} & 较好（调优成本低） \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (PyTorch)}
+\begin{lstlisting}
+import torch.optim as optim
+
+# 1. 经典 SGD + Momentum
+optimizer_sgd = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+
+# 2. 工业级 AdamW (推荐)
+optimizer_adamw = optim.AdamW(model.parameters(), lr=1e-3, betas=(0.9, 0.999))
+
+# 3. 学习率策略 (LR Scheduler)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer_adamw, T_max=100)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：为什么 Adam 通常比 SGD 收敛快？}\\
+答：Adam 为每个参数独立地提供了自适应的学习率。在梯度稀疏的维度上，Adam 会自动增大学习率，使得模型能快速逃离平坦区域或鞍点。而 SGD 使用统一学习率，很难同时兼顾不同维度的更新需求。
+
+\textbf{问：学习率 $\eta$ 设置过大会发生什么？}\\
+答：损失函数会发生剧烈波动甚至直接发散（NaN）。模型可能在局部极小值附近反复跳跃，永远无法收敛。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Kingma, D. P., \& Ba, J. (2014). \textit{Adam: A Method for Stochastic Optimization}. ICLR.
+    \item Loshchilov, I., \& Hutter, F. (2017). \textit{Decoupled Weight Decay Regularization}. ICLR.
+    \item Ruder, S. (2016). \textit{An Overview of Gradient Descent Optimization Algorithms}. arXiv.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,117 @@
+% 分类目录：dl
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：数据预处理 (Data Preprocessing)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：数据预处理是在将原始数据输入模型之前，通过清洗、变换、特征提取等手段，将其转化为适合机器学习/深度学习算法处理的格式的过程。它是“Garbage In, Garbage Out”准则的第一道防线。
+
+\textbf{英文定义}：Data preprocessing is the process of transforming raw data into a format suitable for machine learning or deep learning algorithms through cleaning, transformation, and feature extraction. It is the first line of defense against the "Garbage In, Garbage Out" principle.
+
+\section{数据清洗 (Data Cleaning)}
+
+\subsection{缺失值处理 (Imputation)}
+\begin{itemize}
+    \item \textbf{删除}：当缺失比例极小时直接删除样本。
+    \item \textbf{均值/中位数填补}：适用于连续数值型变量。
+    \item \textbf{众数填补}：适用于分类变量。
+\end{itemize}
+
+\subsection{异常值处理 (Outliers)}
+\begin{itemize}
+    \item \textbf{检测}：利用 3-$\sigma$ 原则（正态分布）或箱线图（IQR）检测。
+    \item \textbf{处理}：盖帽法（Clipping）、平滑法或直接剔除。
+\end{itemize}
+
+\section{特征缩放 (Feature Scaling)}
+
+\subsection{归一化 (Normalization / Min-Max Scaling)}
+将值映射到 $[0, 1]$：
+$$ x' = \frac{x - \min(x)}{\max(x) - \min(x)} $$
+\textbf{适用}：对输出范围有严格要求（如图像），或模型对距离敏感（如 KNN）。
+
+\subsection{标准化 (Standardization / Z-score)}
+转换为均值为 0，方差为 1：
+$$ x' = \frac{x - \mu}{\sigma} $$
+\textbf{适用}：大多数深度学习优化器（如 Adam, SGD），且对异常值更具鲁棒性。
+
+\section{类别特征编码 (Categorical Encoding)}
+
+\begin{itemize}
+    \item \textbf{独热编码 (One-Hot Encoding)}：将 $N$ 个类映射到 $N$ 维稀疏向量。避免隐含的序关系。
+    \item \textbf{标签编码 (Label Encoding)}：直接赋予整数。仅适用于具有序关系（Ordinal）的情况。
+    \item \textbf{嵌入 (Embedding)}：深度学习中常用的方式，将高维离散信息映射到低维稠密向量空间。
+\end{itemize}
+
+\section{数据增强 (Data Augmentation)}
+\textbf{目的}：增加样本多样性，提升模型泛化能力。
+\begin{itemize}
+    \item \textbf{视觉 (CV)}：旋转、缩放、裁剪、翻转、颜色抖动等。
+    \item \textbf{文本 (NLP)}：同义词替换、随机删除、反向翻译。
+\end{itemize}
+
+\section{数据变换 (Transformation)}
+\begin{itemize}
+    \item \textbf{对数变换 (Log Transform)}：处理偏态分布，缩小极值影响。
+    \item \textbf{离散化 (Discretization)}：将连续值分桶（Binning），增强模型对噪声的抗性。
+\end{itemize}
+
+\section{关键代码片段 (Scikit-learn)}
+\begin{lstlisting}
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+
+# 1. 建立数值型预处理管线
+numeric_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())
+])
+
+# 2. 类别型预处理
+categorical_transformer = OneHotEncoder(handle_unknown='ignore')
+
+# 3. 集成到 ColumnTransformer (根据需求列选择)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：为什么深度学习模型通常倾向于使用标准化 (Standardization) 而非简单的 [0, 1] 归一化？}\\
+答：因为深度学习中的激活函数（如 Sigmoid, Tanh）在靠近 0 的区域梯度最大，标准化能将输入尽可能拉回“梯度敏感区”。此外，标准化对异常值的容忍度更高。
+
+\textbf{问：进行数据缩放时，应该使用全量数据的均值，还是仅使用训练集的均值？}\\
+答：\textbf{绝对只能使用训练集的均值和方差}。验证集和测试集必需被视为“未来不可见数据”，使用其信息会导致“数据泄露 (Data Leakage)”，使得评估结果虚高。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Kelleher, J. D., et al. (2015). \textit{Fundamentals of Machine Learning for Predictive Data Analytics}. MIT Press.
+    \item Zheng, A., \& Casari, A. (2018). \textit{Feature Engineering for Machine Learning}. O'Reilly Media.
+    \item Shorten, C., \& Khoshgoftaar, T. M. (2019). \textit{A Survey on Image Data Augmentation for Deep Learning}. Journal of Big Data.
+\end{enumerate}
+
+\end{document}

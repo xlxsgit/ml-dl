@@ -34,27 +34,27 @@
 
 \section{核心衡量指标}
 
-\subsection{1. 自信息 (Self-Information)}
+\subsection{自信息 (Self-Information)}
 衡量一个事件发生的惊讶程度。事件 $x$ 的自信息为：
 $$ I(x) = -\log p(x) $$
 概率越小的事件，包含的信息量越大。
 
-\subsection{2. 信息熵 (Entropy)}
+\subsection{信息熵 (Entropy)}
 所有可能事件自信息的期望值，衡量随机变量的不确定性：
 $$ H(X) = \mathbb{E}_{x \sim P} [I(x)] = -\sum_{x \in \mathcal{X}} p(x) \log p(x) $$
 
-\subsection{3. 相对熵 / KL 散度 (Relative Entropy / KL Divergence)}
+\subsection{相对熵 / KL 散度 (Relative Entropy / KL Divergence)}
 衡量两个分布 $P$ 和 $Q$ 之间的差异：
 $$ D_{KL}(P || Q) = \mathbb{E}_{x \sim P} \left[ \log \frac{p(x)}{q(x)} \right] = \sum p(x) \log \frac{p(x)}{q(x)} $$
 \textbf{注意}：KL 散度是非对称的（即 $D_{KL}(P||Q) \neq D_{KL}(Q||P)$），且始终 $\geq 0$。
 
-\subsection{4. 交叉熵 (Cross-Entropy)}
+\subsection{交叉熵 (Cross-Entropy)}
 在深度学习分类任务中最为常用：
 $$ H(P, Q) = -\mathbb{E}_{x \sim P} [\log q(x)] = -\sum p(x) \log q(x) $$
 它可以拆解为：$H(P, Q) = H(P) + D_{KL}(P || Q)$。
 当 $P$（真实标签）固定时，最小化交叉熵等价于最小化 $P, Q$ 之间的 KL 散度。
 
-\subsection{5. 互信息 (Mutual Information)}
+\subsection{互信息 (Mutual Information)}
 衡量两个变量之间的相互依赖程度：
 $$ I(X; Y) = H(X) - H(X|Y) = H(Y) - H(Y|X) $$
 

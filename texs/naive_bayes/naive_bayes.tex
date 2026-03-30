@@ -1,0 +1,122 @@
+% 分类目录：ml
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{ctex}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single
+}
+
+\title{知识点：朴素贝叶斯 (Naive Bayes)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{核心定义}
+\textbf{中文定义}：朴素贝叶斯是一种基于贝叶斯定理与特征条件独立假设的分类算法。它通过学习样本的先验概率和类条件概率，利用后验概率最大化准则进行预测。因其特征独立性假设在实际场景中难以完全满足，故称为“朴素”。
+
+\textbf{英文定义}：Naive Bayes is a classification algorithm based on Bayes' theorem and the assumption of conditional independence between features. It predicts the most likely class by learning prior probabilities and class-conditional probabilities. It is called "Naive" because its independence assumption is rarely met in real-world scenarios.
+
+\section{数学原理}
+
+\subsection{贝叶斯定理}
+对于待分类的特征向量 $\mathbf{x} = (x_1, x_2, \dots, x_d)$ 和类别 $c_k$，后验概率为：
+$$ P(c_k|\mathbf{x}) = \frac{P(\mathbf{x}|c_k) P(c_k)}{P(\mathbf{x})} $$
+分类目标是选择使 $P(c_k|\mathbf{x})$ 最大的类别：
+$$ \hat{y} = \text{arg max}_{c_k} \frac{P(\mathbf{x}|c_k) P(c_k)}{P(\mathbf{x})} = \text{arg max}_{c_k} P(\mathbf{x}|c_k) P(c_k) $$
+
+\subsection{“朴素”假设 (Conditional Independence)}
+假设所有特征在给定类别下相互独立：
+$$ P(\mathbf{x}|c_k) = P(x_1, x_2, \dots, x_d | c_k) = \prod_{j=1}^d P(x_j|c_k) $$
+最终分类器公式：
+$$ \hat{y} = \text{arg max}_{c_k} P(c_k) \prod_{j=1}^d P(x_j|c_k) $$
+
+\section{参数估计与平滑技术}
+
+\subsection{极大似然估计}
+\begin{itemize}
+    \item 先验概率 $P(c_k) = \frac{N_{c_k}}{N}$
+    \item 类条件概率 $P(x_j|c_k)$ 根据特征类型选择不同分布模型。
+\end{itemize}
+
+\subsection{拉普拉斯平滑 (Laplace Smoothing)}
+\textbf{背景}：如果某个特征值在训练集中未出现（$N_{x_j, c_k} = 0$），则连乘后 $P(\mathbf{x}|c_k) = 0$，导致分类失效。
+\\ \textbf{方法}：在分子加 $\lambda$ (通常为 1)，分母加 $S_j \cdot \lambda$ (该特征可能的取值个数)：
+$$ \hat{P}(x_j|c_k) = \frac{N_{x_j, c_k} + \lambda}{N_{c_k} + S_j \lambda} $$
+
+\section{常见模型变体}
+
+\subsection{高斯朴素贝叶斯 (Gaussian NB)}
+适用于连续型特征。假设 $P(x_j|c_k)$ 服从高斯分布：
+$$ P(x_j|c_k) = \frac{1}{\sqrt{2\pi\sigma_{k,j}^2}} \exp\left( -\frac{(x_j - \mu_{k,j})^2}{2\sigma_{k,j}^2} \right) $$
+
+\subsection{多项式朴素贝叶斯 (Multinomial NB)}
+适用于离散特征，常用于文本分类（词频统计）。
+
+\subsection{伯努利朴素贝叶斯 (Bernoulli NB)}
+适用于二值特征（如词语是否出现，不考虑频率）。
+
+\section{优缺点分析}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{优点} & 算法简单、预测效率极高；在小规模数据及文本分类上表现优异。 \\
+\hline
+\textbf{缺点} & 特征独立性假设过强；对输入数据的表达形式敏感。 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{关键代码片段 (Python)}
+\begin{lstlisting}
+from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.feature_extraction.text import CountVectorizer
+
+# 1. 连续型数据 (Gaussian)
+gnb = GaussianNB()
+gnb.fit(X_train, y_train)
+
+# 2. 文本数据 (Multinomial)
+vectorizer = CountVectorizer()
+X_counts = vectorizer.fit_transform(corpus)
+mnb = MultinomialNB()
+mnb.fit(X_counts, y_labels)
+
+y_pred = mnb.predict(X_new)
+\end{lstlisting}
+
+\section{深度面试题}
+
+\textbf{问：朴素贝叶斯对缺失值敏感吗？}\\
+答：不敏感。如果某个属性值缺失，可以在计算概率乘积时直接忽略该属性（相当于在其分量上不区分条件概率），这是概率图模型处理缺失数据的天然优势。
+
+\textbf{问：如果类条件概率乘积变得非常小导致下溢怎么办？}\\
+答：通常取对数（Log-likelihood）。将概率连乘公式转化为对数求和公式：
+$$ \ln P(c_k) + \sum_{j=1}^d \ln P(x_j|c_k) $$
+这不仅能防止下溢，还能加速计算。
+
+\section{参考文献}
+\begin{enumerate}
+    \item Hand, D. J., \& Yu, K. (2001). \textit{Idiot's Bayes: Not So Stupid After All?}. International Statistical Review.
+    \item Zhang, H. (2004). \textit{The Optimality of Naive Bayes}. FLAIRS.
+    \item Mitchell, T. M. (1997). \textit{Machine Learning}. McGraw-Hill.
+\end{enumerate}
+
+\end{document}

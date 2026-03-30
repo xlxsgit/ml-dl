@@ -38,13 +38,13 @@
 
 \section{核心原理：潜在空间参数化}
 
-\subsection{1. 结构组成}
+\subsection{结构组成}
 \begin{itemize}
     \item \textbf{编码器 (Encoder)}：学习映射 $q_\phi(z|x)$，输出均值 $\mu$ 和方差 $\sigma$（通常输出 $\log \sigma^2$ 以保证数值稳定）。
     \item \textbf{解码器 (Decoder)}：学习映射 $p_\theta(x|z)$，从隐变量 $z$ 中重构输入 $\hat{x}$。
 \end{itemize}
 
-\subsection{2. 重参数化技巧 (Reparameterization Trick)}
+\subsection{重参数化技巧 (Reparameterization Trick)}
 由于从分布 $\mathcal{N}(\mu, \sigma^2)$ 中直接采样是一个不可导的操作，无法进行反向传播。VAE 引入了重参数化：
 $$ z = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, \mathbf{I}) $$
 这样，随机性被转移到了外部变量 $\epsilon$ 上，而梯度可以顺利通过 $\mu$ 和 $\sigma$ 回传。

@@ -39,7 +39,7 @@
 \section{核心原理：零和博弈}
 GAN 的核心在于其独特的目标函数，定义为一个\textbf{极小极大博弈 (Minimax Game)}。
 
-\subsection{1. 目标函数}
+\subsection{目标函数}
 $$ \min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))] $$
 \textbf{符号说明}：
 \begin{itemize}
@@ -49,7 +49,7 @@ $$ \min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{data}(x)}[\log D(x)] + \mathbb{
     \item $\min_G$：生成器希望最小化判别器的判断力（使得生成样本让判别器输出近 1）。
 \end{itemize}
 
-\subsection{2. 训练过程}
+\subsection{训练过程}
 训练是一个交替进行的迭代过程：
 \begin{enumerate}
     \item \textbf{固定 G，训练 D}：使判别器更强。

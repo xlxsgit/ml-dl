@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器学习知识点复习地图</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+    
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <h1>📚 知识点复习地图</h1>
+                <p>记录与追踪你的机器学习与深度学习系统化知识</p>
+            </div>
+            <div class="overall-progress">
+                <div class="progress-header">
+                    <span class="label">总复习进度</span>
+                    <span class="value" id="overall-percent">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-fill" id="overall-fill"></div>
+                </div>
+            </div>
+        </header>
+
+        <main id="category-container">
+            <!-- Categories will be injected here dynamically by script.js -->
+        </main>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
