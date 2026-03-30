@@ -6,6 +6,7 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{tabularx}
+\usepackage{hyperref}
 
 \lstset{
     language=Python,
@@ -20,123 +21,101 @@
     frame=single
 }
 
-\title{知识点：损失函数 (Loss Functions)}
+\title{知识点精讲：深度学习损失函数 (Loss Functions) 详解}
 \author{}
 \date{}
 
 \begin{document}
 \maketitle
 
-\section{核心定义}
-\textbf{中文定义}：损失函数（Loss Function）是用于衡量模型预测值与真实标签之间差异的函数。它是深度学习优化过程的“指挥棒”，通过反向传播计算梯度，引导模型参数向减少误差的方向更新。
+\section{损失函数的统一数学框架}
+从概率论视角看，损失函数通常是**极大似然估计 (MLE)** 的负对数似然形式。
+\begin{itemize}
+    \item \textbf{高斯分布假设 $\to$ MSE}：若假设模型噪声服从正态分布 $P(y|x) \sim N(f(x), \sigma^2)$，则最小化负对数似然等价于最小化均方误差。
+    \item \textbf{伯努利分布假设 $\to$ 二元交叉熵}：若假设 $P(y|x)$ 服从二项分布，则 MLE 直接推导出 BCE 公式。
+\end{itemize}
 
-\textbf{英文定义}：A Loss Function (or Objective Function) is a mathematical function that quantifies the difference between the predicted value and the ground truth. It serves as the objective for optimization, guiding the model parameters to minimize errors through gradient descent.
+\section{信息论视角：从熵到交叉熵}
+\begin{itemize}
+    \item \textbf{自信息与熵}：$H(P) = -\sum P(x) \log P(x)$，衡量分布的不确定性。
+    \item \textbf{KL 散度 (相对熵)}：$D_{KL}(P||Q) = H(P, Q) - H(P)$，衡量分布 $Q$ 对真实分布 $P$ 的偏离程度。
+    \item \textbf{交叉熵}：$H(P, Q) = -\sum P(x) \log Q(x)$。在机器学习中，由于真实分布 $P$ 是固定的，最小化 KL 散度等价于最小化交叉熵。
+\end{itemize}
 
 \section{常用损失函数详解}
 
-\subsection{均方误差 (MSE)}
-$$ L = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 $$
-\textbf{适用场景}：回归任务（如预测房价、坐标回归）。
-\textbf{特点}：对异常值（Outliers）非常敏感。
+\subsection{回归任务 (Regression)}
+\begin{enumerate}
+    \item \textbf{均方误差 (MSE)}：对异常值极度敏感（平方惩罚）。
+    \item \textbf{平均绝对误差 (MAE)}：鲁棒性更好，但在 0 点不可导。
+    \item \textbf{Huber Loss}：误差小时平方，误差大时线性。具备 MSE 的平滑收敛与 MAE 的离群点抗性。
+    \item \textbf{Log-Cosh Loss}：$\ln(\cosh(y - \hat{y}))$。二阶可导的 Huber 近似，比 Huber 更平滑。
+\end{enumerate}
 
-\subsection{二元交叉熵 (Binary Cross Entropy)}
-$$ L = -\frac{1}{n} \sum_{i=1}^n [y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i)] $$
-\textbf{适用场景}：二分类任务。要求输出 $\hat{y}_i \in [0, 1]$（通常配对 Sigmoid）。
+\subsection{分类任务 (Classification)}
+\begin{enumerate}
+    \item \textbf{交叉熵 (CE)}：分类标准，具有加速梯度传导的特性。
+    \item \textbf{Focal Loss}：旨在解决类别不平衡和难易样本失配。
+    $$ L_{focal} = -(1 - p_t)^\gamma \log(p_t) $$
+    通过 $(1-p_t)^\gamma$ 衰减易分类样本的分值，使模型专注于“难点”。
+\end{enumerate}
 
-\subsection{交叉熵 (Categorical Cross Entropy)}
-$$ L = -\sum_{c=1}^M y_{o,c} \log(p_{o,c}) $$
-\textbf{适用场景}：多分类任务。常与 Softmax 配合使用，衡量两个概率分布之间的距离。
+\subsection{计算机视觉与度量学习 (CV \& Metric)}
+\begin{enumerate}
+    \item \textbf{Dice Loss}：专门应对高度类别不平衡（如医学图像分割），衡量两个区域的重叠度。
+    \item \textbf{IOU 家族}：从 IOU 演进到 \textbf{GIOU} (非重叠区补偿)、\textbf{DIOU} (中心距惩罚) 到 \textbf{CIOU} (宽高比一致性)，是目标检测回归精度的保障。
+    \item \textbf{Triplet Loss}：三元组损失 $\max(0, d(a,p) - d(a,n) + \text{margin})$，用于人脸识别等嵌入式空间学习。
+\end{enumerate}
 
-\subsection{KL 散度 (Kullback-Leibler Divergence)}
-$$ D_{KL}(P || Q) = \sum P(x) \log \frac{P(x)}{Q(x)} $$
-\textbf{适用场景}：衡量两个概率分布的差异。在 VAE 中用于规范化隐空间分布。
+\section{数学推导：Softmax 加交叉熵的导数}
+设 $z_i$ 为网络输出的 Logits，$p_i = \text{softmax}(z_i)$，损失函数 $L = -\sum y_j \log p_j$。
+对于第 $i$ 个维度的求导：
+$$ \frac{\partial L}{\partial z_i} = p_i - y_i $$
+其中 $y_i$ 为真值标签（One-hot）。此公式展示了反向传播的优雅：梯度即为**预测值与真实值的差**。
 
-\subsection{Smooth L1 损失 (Huber Loss)}
-当误差小时呈 L2（平方），误差大时呈 L1（线性）。
-\textbf{优点}：缓解了 MSE 对异常值的敏感，同时避免了 L1 在 0 点处不可导的问题。常用于目标检测中的边界框回归。
-
-\section{反向传播中的角色}
-参数更新公式为：$ W \leftarrow W - \eta \frac{\partial L}{\partial W} $。
-损失函数的导数直接决定了初次回传的梯度大小。如果 Loss 选错（例如二分类用 MSE），会导致函数饱和区梯度极小，模型无法收敛。
-
-\section{典型架构示意图}
-\begin{verbatim}
-[ 特征提取网络 ] --> [ 预测值 y_hat ] 
-                            |
-                            v
-[ 真实标签 y ] ------> [ 损失函数 L ] --> [ 计算梯度 dL/dy_hat ]
-                            |                   |
-                            +-------------------+
-                                     |
-                                     v
-                            [ 反向传播更新参数 ]
-\end{verbatim}
-
-\section{关键代码片段 (PyTorch实现)}
-\begin{lstlisting}
-import torch
-import torch.nn as nn
-
-# 1. 回归常用
-mse_loss = nn.MSELoss()
-
-# 2. 分类常用 (注意: CrossEntropyLoss 内部集成 LogSoftmax)
-# 预测值应为 Raw Logits
-ce_loss = nn.CrossEntropyLoss()
-
-# 3. 二分类
-# 如果输出已通过 Sigmoid:
-bce_loss = nn.BCELoss()
-# 如果输出是 Logits (推荐, 更数值稳定):
-bce_with_logits = nn.BCEWithLogitsLoss()
-
-# 使用示例
-logits = model(input)
-loss = ce_loss(logits, target)
-loss.backward()
-\end{lstlisting}
-
-\section{深度面试题与解答}
-\subsection{基础概念}
-\textbf{问：分类任务为什么通常用交叉熵而不是 MSE？}\\
-答：主要有两点：1. \textbf{学习效率}：交叉熵配合 Softmax 在反向传播时，梯度与预测误差成线性比例，即便误差很大也有强梯度；而 MSE 在分类问题中，输出层容易陷入饱和区，导致梯度消失。2. \textbf{概率意义}：交叉熵源于最大似然估计，更符合分布拟合的本质。
-
-\subsection{进阶原理}
-\textbf{问：Softmax + Cross-Entropy 的导数有什么优雅的形式？}\\
-答：设预测概率为 $p_i$，真实标签为 $y_i$（One-hot），其梯度简写为 $\frac{\partial L}{\partial z_i} = p_i - y_i$。即预测值与真实值的差，简洁且直观。
-
-\subsection{工程实战}
-\textbf{问：样本不均衡（Imbalanced Data）时该如何调整损失函数？}\\
-答：可以给不同类别设置权重（Weight），如 \texttt{nn.CrossEntropyLoss(weight=tensor)}。或者使用 \textbf{Focal Loss}，通过调整系数让模型更关注难分类的样本（Hard Examples）。
-
-\subsection{坑点分析}
-\textbf{问：L1 Loss 和 L2 Loss 分别有什么优缺点？}\\
-答：L2 (MSE) 下梯度随误差减小而减小，有利于收敛，但易受离群点干扰。L1 梯度恒定，对异常值稳健，但在 0 点不可导且在小误差下容易震荡。
-
-\section{损失函数对比总结表}
-
+\section{全维度对比概览表}
 \begin{table}[h]
 \centering
-\begin{tabularx}{\textwidth}{|l|l|X|}
+\small
+\begin{tabularx}{\textwidth}{|l|c|X|l|}
 \hline
-\textbf{函数} & \textbf{适用任务} & \textbf{主要优势} \\
+\textbf{损失函数} & \textbf{鲁棒性} & \textbf{梯度行为} & \textbf{核心应用} \\
 \hline
-MSE & 回归 & 凸函数，收敛平滑。 \\
+MSE & 差 & 随误差减小而衰减 (有利收敛) & 线性回归、坐标预测 \\
 \hline
-Cross-Entropy & 分类 & 梯度传导快，信息论支持。 \\
+MAE & 好 & 梯度恒定 (小误差下易震荡) & 鲁棒回归 \\
 \hline
-Smooth L1 & 目标检测 & 稳健且在 0 附近平滑。 \\
+Focal Loss & --- & 降低易分类样本权重 & 类别极度不平衡 \\
 \hline
-Dice Loss & 语义分割 & 能够应对严重的类别不平衡。 \\
+Dice Loss & --- & 区域相关性驱动 & 语义分割 \\
 \hline
 \end{tabularx}
 \end{table}
 
-\section{参考文献与拓展}
+\section{标签平滑 (Label Smoothing)}
+将目标值修改为 $\hat{y} = (1 - \epsilon)y + \epsilon/K$，防止模型在训练中过于“自信”，起到正则化作用，减少过拟合。
+
+\section{关键代码片段 (PyTorch)}
+\begin{lstlisting}
+import torch
+import torch.nn.functional as F
+
+# 1. 具备数值稳定性的 BCE
+loss_bce = F.binary_cross_entropy_with_logits(logits, target)
+
+# 2. 自定义 Focal Loss 简易逻辑
+def focal_loss(logits, targets, alpha=0.25, gamma=2.0):
+    ce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+    pt = torch.exp(-ce_loss) 
+    focal_loss = alpha * (1 - pt)**gamma * ce_loss
+    return focal_loss.mean()
+\end{lstlisting}
+
+\section{参考文献}
 \begin{enumerate}
-    \item \textbf{深度研究}: \textit{Deep Learning} (Ian Goodfellow) - Chapter 6.
-    \item \textbf{PyTorch 文档}: \texttt{torch.nn} 模块下的 Loss Functions 章节。
-    \item \textbf{进阶变体}: Lin, T. Y., et al. (2017). \textit{Focal Loss for Dense Object Detection}.
+    \item Lin, T. Y., et al. (2017). \textit{Focal Loss for Dense Object Detection}.
+    \item Goodfellow, I., et al. (2016). \textit{Deep Learning} (Chapter 6.2).
+    \item Sudre, C. H., et al. (2017). \textit{Generalised Dice Overlap as a Deep Learning Loss Function for Highly Unbalanced Segmentations}.
 \end{enumerate}
 
 \end{document}

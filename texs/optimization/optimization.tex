@@ -21,107 +21,77 @@
     frame=single
 }
 
-\title{知识点：模型优化方法 (Optimization Methods)}
+\title{知识点精讲：深度学习模型优化算法 (Optimization Algorithms)}
 \author{}
 \date{}
 
 \begin{document}
 \maketitle
 
-\section{核心定义}
-\textbf{中文定义}：模型优化是寻找一组最优模型参数 $\theta$，使得损失函数 $L(\theta)$ 达到最小值的过程。在机器学习中，这通常表现为一个高维、非凸的数学优化问题。
+\section{优化问题的数学本质}
+在深度学习中，优化目标是寻找参数 $\theta$ 使得损失函数 $J(\theta)$ 最小。在高维非凸空间中，优化面临的核心挑战如下：
 
-\textbf{英文定义}：Model optimization is the process of finding a set of optimal parameters $\theta$ that minimize the loss function $L(\theta)$. In machine learning, this is typically formulated as a high-dimensional, non-convex mathematical optimization problem.
-
-\section{梯度下降基础 (Gradient Descent)}
-
-\subsection{基本形式}
-$$ \theta_{t+1} = \theta_t - \eta \cdot \nabla_{\theta} L(\theta_t) $$
-其中 $\eta$ 为学习率。
-
-\subsection{变体对比}
 \begin{itemize}
-    \item \textbf{BGD (Batch GD)}：利用全量样本计算梯度。收敛稳定但计算开销巨大。
-    \item \textbf{SGD (Stochastic GD)}：每次随机选取一个样本计算。更新频率快，但路径极其震荡，难以到达全局最优。
-    \item \textbf{MBGD (Mini-batch GD)}：折中方案。利用小批量（如 64, 128）数据计算。是目前深度学习的默认选择。
+    \item \textbf{鞍点 (Saddle Points)}：梯度为 0 但非极值的点。在高维空间中，鞍点数量远超局部极小值。判断准则是 Hessian 矩阵的特征值同时包含正数和负数。
+    \item \textbf{病态曲率 (Ill-conditioned Curvature)}：Hessian 矩阵的条件数 (Condition Number) 过大，导致梯度方向并不指向局部极小值点，使得优化过程在陡峭方向震荡，在平滑方向进展缓慢。
 \end{itemize}
 
-\section{动量与加速 (Momentum \& Nesterov)}
+\section{经典梯度下降及其变体}
 
-\subsection{Momentum (动量法)}
-引入历史梯度的累积（动量 $v$），类似由于物理惯性冲过“峡谷”：
-$$ v_{t+1} = \gamma v_t + \eta \nabla L(\theta_t) $$
-$$ \theta_{t+1} = \theta_t - v_{t+1} $$
-\textbf{作用}：加速在正确方向上的搜索，抑制震荡。
+\subsection{动量法 (Momentum)}
+引入一阶矩（动量 $v$）来加速收敛并抑制震荡：
+$$ v_t = \beta v_{t-1} + (1-\beta) \nabla J(\theta_t) $$
+$$ \theta_t = \theta_{t-1} - \eta v_t $$
+\textbf{直觉}：模拟物理惯性，在梯度不一致的方向相互抵消，在一致的方向叠加。
 
-\subsection{NAG (Nesterov Accelerated Gradient)}
-在“超前”位置计算梯度。相比于标准动量法，它能提前感知坡度的变化从而适时“减速”，具有更好的鲁棒性。
+\subsection{Nesterov 加速梯度 (NAG)}
+在计算梯度前，先根据当前动量向前“展望”一步：
+$$ g_t = \nabla J(\theta_{t-1} - \eta \beta v_{t-1}) $$
+$$ v_t = \beta v_{t-1} + (1-\beta) g_t, \quad \theta_t = \theta_{t-1} - \eta v_t $$
+\textbf{核心}：NAG 具有“提前刹车”的能力，在坡度改变前预感知，从而提高稳定性。
 
-\section{自适应学习率 (Adaptive Methods)}
-
-\subsection{AdaGrad}
-根据梯度的二阶导数动态调整每个参数的学习率。
-\\ \textbf{局限}：分母中梯度的平方累加会导致学习率后期迅速萎缩至 0，导致训练提前停止。
-
-\subsection{RMSProp}
-引入指数加权移动平均（EWMA）来解决 AdaGrad 的萎缩问题，只关注最近一段时间的梯度。
+\section{自适应学习率算法}
 
 \subsection{Adam (Adaptive Moment Estimation)}
-结合了 \textbf{Momentum}（一阶矩估计）和 \textbf{RMSProp}（二阶矩估计）的优点：
-\begin{enumerate}
-    \item 计算梯度的一阶矩 $m$ 和二阶矩 $v$。
-    \item 进行偏置校正（修复初期权重为 0 的影响）。
-    \item 更新参数。
-\end{enumerate}
-\textbf{评价}：自适应能力强，超参数容易调节，是深度学习最推荐的“工业级”优化器。
+结合了 Momentum（一阶矩 $m$）和 RMSProp（二阶矩 $v$）：
+$$ m_t = \beta_1 m_{t-1} + (1-\beta_1)g_t $$
+$$ v_t = \beta_2 v_{t-1} + (1-\beta_2)g_t^2 $$
+\textbf{偏置修正 (Bias Correction)}：由于 $m_0, v_0$ 初始化为 0，初期估计会严重向 0 偏移：
+$$ \hat{m}_t = \frac{m_t}{1-\beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1-\beta_2^t} $$
+$$ \theta_t = \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} $$
 
-\section{AdamW 与权重衰减 (Weight Decay)}
-\textbf{背景}：研究发现 Adam 在结合 L2 正则化时，权重衰减效果不如 SGD。
-\\ \textbf{AdamW 改进}：将权重衰减项（Weight Decay）直接应用在参数更新公式上，而不是合并在梯度中计算。这使得模型具有更强的泛化能力。
+\subsection{AdamW：权重衰减的解耦}
+在 Adam 中，L2 正则化项合并在梯度中会受到二阶矩自适应缩放的影响，导致正则化效果变差。AdamW 将权重衰减直接应用在参数更新步，修正了这一逻辑。
 
-\section{评估指标：速度 vs. 收敛性}
-\begin{table}[h]
-\centering
-\begin{tabularx}{\textwidth}{|l|X|X|}
-\hline
-\textbf{算法} & \textbf{收敛速度} & \textbf{泛化能力} \\
-\hline
-BGD & 极慢 & 较好（稳定） \\
-\hline
-SGD + Momentum & 中等 & \textbf{优秀}（常建议在 Adam 训练后期切换） \\
-\hline
-Adam & \textbf{极快} & 较好（调优成本低） \\
-\hline
-\end{tabularx}
-\end{table}
+\section{现代 SOTA 优化器}
 
-\section{关键代码片段 (PyTorch)}
+\subsection{Lion (EvoLved Sign mOmeNtum)}
+Google 通过进化算法发现，仅使用梯度的符号位即可获得极佳性能：
+$$ u_t = \text{sign}(\beta_1 m_{t-1} + (1-\beta_1)g_t) $$
+$$ \theta_t = \theta_{t-1} - \eta u_t, \quad m_t = \beta_2 m_{t-1} + (1-\beta_2)g_t $$
+\textbf{优势}：显存占用比 AdamW 少 50\%（不存储二阶增量），且在 Transformer 任务中具有更强的泛化性。
+
+\subsection{Sophia：轻量级二阶优化器}
+针对大语言模型 (LLM) 设计。利用对 Hessian 矩阵对角元的随机估计进行剪切优化：
+$$ \theta_t = \theta_t - \eta \cdot \text{clip}\left(\frac{m_t}{\max(h_t, \gamma)}, \rho\right) $$
+在同等训练开销下，比 AdamW 同步快 2 倍以上。
+
+\section{泛化策略：平坦极小值 (Flat Minima)}
+\textbf{Lookahead}：维护一组慢权重，定期同步快权重的平均方向，步步为营。
+\textbf{SWA (Stochastic Weight Averaging)}：在训练后期对多个模型快照求算术平均，旨在寻找损失曲面上更加“宽阔平坦”的区域。
+
+\section{核心代码参考 (PyTorch)}
 \begin{lstlisting}
 import torch.optim as optim
 
-# 1. 经典 SGD + Momentum
-optimizer_sgd = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+# 1. 工业级 AdamW 配置
+optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01)
 
-# 2. 工业级 AdamW (推荐)
-optimizer_adamw = optim.AdamW(model.parameters(), lr=1e-3, betas=(0.9, 0.999))
+# 2. 结合 CosineAnnealing 调度器
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
 
-# 3. 学习率策略 (LR Scheduler)
-scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer_adamw, T_max=100)
+# 3. 学习率 Warmup (Linear Warmup)
+# 通常在大规模训练初期手动实现或使用工具库实现
 \end{lstlisting}
-
-\section{深度面试题}
-
-\textbf{问：为什么 Adam 通常比 SGD 收敛快？}\\
-答：Adam 为每个参数独立地提供了自适应的学习率。在梯度稀疏的维度上，Adam 会自动增大学习率，使得模型能快速逃离平坦区域或鞍点。而 SGD 使用统一学习率，很难同时兼顾不同维度的更新需求。
-
-\textbf{问：学习率 $\eta$ 设置过大会发生什么？}\\
-答：损失函数会发生剧烈波动甚至直接发散（NaN）。模型可能在局部极小值附近反复跳跃，永远无法收敛。
-
-\section{参考文献}
-\begin{enumerate}
-    \item Kingma, D. P., \& Ba, J. (2014). \textit{Adam: A Method for Stochastic Optimization}. ICLR.
-    \item Loshchilov, I., \& Hutter, F. (2017). \textit{Decoupled Weight Decay Regularization}. ICLR.
-    \item Ruder, S. (2016). \textit{An Overview of Gradient Descent Optimization Algorithms}. arXiv.
-\end{enumerate}
 
 \end{document}

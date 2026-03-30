@@ -6,6 +6,7 @@
     <title>机器学习知识点复习地图</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
 <body>
     <div class="background-effects">
@@ -16,7 +17,12 @@
     <div class="app-container">
         <header>
             <div class="header-content">
-                <h1>📚 知识点复习地图</h1>
+                <div class="header-title-row">
+                    <h1>知识点复习地图</h1>
+                    <button id="open-graph-btn" class="glass-btn">
+                        知识图谱
+                    </button>
+                </div>
                 <p>记录与追踪你的机器学习与深度学习系统化知识</p>
             </div>
             <div class="overall-progress">
@@ -33,6 +39,19 @@
         <main id="category-container">
             <!-- Categories will be injected here dynamically by script.js -->
         </main>
+    </div>
+
+    <!-- Knowledge Graph Modal -->
+    <div id="graph-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>知识点关联图谱</h2>
+                <button id="close-graph-btn" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="graph-container"></div>
+            </div>
+        </div>
     </div>
 
     <script src="data.js"></script>
