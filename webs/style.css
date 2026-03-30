@@ -195,7 +195,7 @@ main {
 .kp-list {
     list-style: none;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: 1fr;
     gap: 1.25rem;
 }
 
@@ -304,8 +304,22 @@ main {
 .term-tree-root {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.6rem;
     align-items: flex-start;
+}
+
+.term-leaf-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.term-branch-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
 }
 
 .term-node-wrapper {

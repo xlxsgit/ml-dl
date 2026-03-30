@@ -160,7 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 function createTermTree(containerElement, termArray) {
                     const sorted = [...termArray].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
-                    sorted.forEach(termObj => {
+                    
+                    const leafTerms = sorted.filter(t => !t.children || t.children.length === 0);
+                    const branchTerms = sorted.filter(t => t.children && t.children.length > 0);
+
+                    const createNode = (termObj) => {
                         const wrapper = document.createElement('div');
                         wrapper.className = 'term-node-wrapper';
 
@@ -268,8 +272,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         wrapper.appendChild(childrenContainer);
-                        containerElement.appendChild(wrapper);
-                    });
+                        return wrapper;
+                    };
+
+                    if (leafTerms.length > 0) {
+                        const leafContainer = document.createElement('div');
+                        leafContainer.className = 'term-leaf-container';
+                        leafTerms.forEach(t => leafContainer.appendChild(createNode(t)));
+                        containerElement.appendChild(leafContainer);
+                    }
+
+                    if (branchTerms.length > 0) {
+                        const branchContainer = document.createElement('div');
+                        branchContainer.className = 'term-branch-container';
+                        branchTerms.forEach(t => branchContainer.appendChild(createNode(t)));
+                        containerElement.appendChild(branchContainer);
+                    }
                 }
 
                 function renderTags() {
@@ -395,7 +413,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     kpRoots.push(kpNodeId);
                     if (!kpChildrenMap[kpNodeId]) kpChildrenMap[kpNodeId] = new Set();
                     
-                    const kpColor = catCode === 'dl' ? '#15803d' : (catCode === 'ml' ? '#22c55e' : '#4ade80');
+                    const isChecked = !!savedProgress[kpNodeId];
+                    const kpColor = isChecked 
+                        ? (catCode === 'dl' ? '#15803d' : (catCode === 'ml' ? '#16a34a' : '#22c55e'))
+                        : (catCode === 'dl' ? '#1d4ed8' : (catCode === 'ml' ? '#2563eb' : '#3b82f6'));
+                        
                     if (!baseNodesMap.has(kpNodeId)) {
                         const kpName = formatName(kp);
                         const [w, h] = getTextBoundingSize(kpName, 13, 14, 8);
@@ -408,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     // Process tree
-                    function traverseTerms(treeArray, parentId, currentDepth) {
+                    function traverseTerms(treeArray, parentId, currentDepth, rootNodeId) {
                         treeArray.forEach(termObj => {
                             const termId = `term_${termObj.name}`;
                             if (!termMap[termId]) {
@@ -416,12 +438,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                     name: termObj.name,
                                     depth: currentDepth,
                                     parents: new Set(),
-                                    children: new Set()
+                                    children: new Set(),
+                                    rootSources: new Set()
                                 };
                             } else {
                                 termMap[termId].depth = Math.min(termMap[termId].depth, currentDepth);
                             }
                             termMap[termId].parents.add(parentId);
+                            termMap[termId].rootSources.add(rootNodeId);
 
                             if (parentId.startsWith('term_')) {
                                 if (termMap[parentId]) termMap[parentId].children.add(termId);
@@ -430,26 +454,48 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             if (termObj.children && termObj.children.length > 0) {
-                                traverseTerms(termObj.children, termId, currentDepth + 1);
+                                traverseTerms(termObj.children, termId, currentDepth + 1, rootNodeId);
                             }
                         });
                     }
-                    traverseTerms(termsTree, kpNodeId, 1);
+                    traverseTerms(termsTree, kpNodeId, 1, kpNodeId);
                 }
             });
         }
 
-        const depthColors = {
-            1: { bg: '#86efac', text: '#14532d', border: '#4ade80' },
-            2: { bg: '#bbf7d0', text: '#166534', border: '#86efac' },
-            3: { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
-            4: { bg: '#f0fdf4', text: '#166534', border: '#dcfce7' }
+        const palettes = {
+            green: { 
+                1: { bg: '#86efac', text: '#14532d', border: '#4ade80' },
+                2: { bg: '#bbf7d0', text: '#166534', border: '#86efac' },
+                3: { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
+                4: { bg: '#f0fdf4', text: '#166534', border: '#dcfce7' }
+            },
+            blue: { 
+                1: { bg: '#93c5fd', text: '#1e3a8a', border: '#60a5fa' },
+                2: { bg: '#bfdbfe', text: '#1e40af', border: '#93c5fd' },
+                3: { bg: '#dbeafe', text: '#1e40af', border: '#bfdbfe' },
+                4: { bg: '#eff6ff', text: '#1e40af', border: '#dbeafe' }
+            },
+            red: { 
+                1: { bg: '#fca5a5', text: '#7f1d1d', border: '#f87171' },
+                2: { bg: '#fecaca', text: '#991b1b', border: '#fca5a5' },
+                3: { bg: '#fee2e2', text: '#991b1b', border: '#fecaca' },
+                4: { bg: '#fef2f2', text: '#991b1b', border: '#fee2e2' }
+            }
         };
 
         // Add Term Nodes and Edges
         for (const [termId, data] of Object.entries(termMap)) {
             const depth = Math.min(data.depth, 4);
-            const style = depthColors[depth] || depthColors[4];
+            
+            let theme = 'red';
+            if (data.rootSources.size === 1) {
+                const singleRootKP = Array.from(data.rootSources)[0];
+                const isChecked = !!savedProgress[singleRootKP];
+                theme = isChecked ? 'green' : 'blue';
+            }
+            
+            const style = palettes[theme][depth] || palettes[theme][4];
             const [w, h] = getTextBoundingSize(data.name, 11, 10, 5);
             
             baseNodesMap.set(termId, {
@@ -460,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             data.parents.forEach(pId => {
-                allEdges.push({ source: pId, target: termId });
+                allEdges.push({ source: pId, target: termId, theme: theme });
             });
         }
 
@@ -539,7 +585,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         allEdges.forEach(edge => {
             if (activeNodes.has(edge.source) && activeNodes.has(edge.target)) {
-                edges.push(edge);
+                let edgeColor = '#86efac';
+                if (edge.theme === 'blue') edgeColor = '#93c5fd';
+                else if (edge.theme === 'red') edgeColor = '#fca5a5';
+                
+                edges.push({
+                    source: edge.source,
+                    target: edge.target,
+                    lineStyle: {
+                        color: edgeColor
+                    }
+                });
             }
         });
 
@@ -564,7 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: nodes,
                 links: edges,
                 lineStyle: {
-                    color: '#86efac',
                     curveness: 0.15,
                     opacity: 0.8,
                     width: 2
