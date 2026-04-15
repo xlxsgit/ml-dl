@@ -7,6 +7,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
     <div class="background-effects">
@@ -36,6 +42,12 @@
             </div>
         </header>
 
+        <div class="toolbar">
+            <input type="text" id="search-input" placeholder="搜索知识点或词条..." />
+            
+            <button id="toggle-collapse-btn" class="glass-btn">全部展开</button>
+        </div>
+
         <main id="category-container">
             <!-- Categories will be injected here dynamically by script.js -->
         </main>
@@ -46,10 +58,56 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>知识点关联图谱</h2>
-                <button id="close-graph-btn" class="close-btn">✕</button>
+                <div style="display:flex; gap:10px;">
+                    <button id="graph-expand-all" class="glass-btn-small">一键展开</button>
+                    <button id="graph-collapse-all" class="glass-btn-small">一键收缩</button>
+                    <button id="close-graph-btn" class="close-btn">✕</button>
+                </div>
             </div>
             <div class="modal-body">
                 <div id="graph-container"></div>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Term Note Modal -->
+    <div id="note-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="note-modal-title">编辑笔记</h2>
+                <button id="close-note-btn" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body note-modal-body">
+                <textarea id="note-textarea" placeholder="输入笔记内容，支持公式如 $E=mc^2$ ..."></textarea>
+                <div class="preview-header">预览 (支持公式): <button id="preview-note-btn" class="glass-btn-small">渲染</button></div>
+                <div id="note-preview-area" class="preview-area"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-note-btn" class="glass-btn primary-btn">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QA Modal -->
+    <div id="qa-modal" class="modal-overlay hidden">
+        <div class="modal-content qa-modal-content">
+            <div class="modal-header">
+                <h2 id="qa-modal-title">问答笔记</h2>
+                <button id="close-qa-btn" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="qa-list" class="qa-list"></div>
+                <div class="add-qa-section">
+                    <h3>添加新问答</h3>
+                    <textarea id="qa-question" placeholder="输入问题 (支持公式...)"></textarea>
+                    <textarea id="qa-answer" placeholder="输入参考答案 (支持公式...)"></textarea>
+                    <div class="preview-header">预览 <button id="preview-qa-btn" class="glass-btn-small">渲染</button></div>
+                    <div id="qa-preview-area" class="preview-area"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-qa-btn" class="glass-btn primary-btn">保存问答</button>
             </div>
         </div>
     </div>

@@ -16,6 +16,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    
+    const CUSTOM_KP_KEY = 'ml_dl_custom_kp';
+    let customKPData = JSON.parse(localStorage.getItem(CUSTOM_KP_KEY) || '{ "dl": [], "ml": [], "rl": [] }');
+    for(const cat in customKPData) {
+        if(!kpData[cat]) kpData[cat] = [];
+        kpData[cat] = [...new Set([...kpData[cat], ...customKPData[cat]])];
+    }
+    
+    const CUSTOM_NAME_KEY = 'ml_dl_custom_names';
+    let customNames = JSON.parse(localStorage.getItem(CUSTOM_NAME_KEY) || '{}');
+    
+    function saveCustomNames() {
+        localStorage.setItem(CUSTOM_NAME_KEY, JSON.stringify(customNames));
+    }
+    
+    // Instead of using formatName(kp) directly, we wrap it
+    function getDisplayName(key, defaultName) {
+        return customNames[key] || defaultName;
+    }
+
+    const QA_STORAGE_KEY = 'ml_dl_kp_qa';
+    let savedQA = JSON.parse(localStorage.getItem(QA_STORAGE_KEY) || '{}');
+
+    function saveCustomKPs() {
+        localStorage.setItem(CUSTOM_KP_KEY, JSON.stringify(customKPData));
+    }
+    function saveQA() {
+        localStorage.setItem(QA_STORAGE_KEY, JSON.stringify(savedQA));
+    }
+    
+    // Notes logic in terms
+    // We already use savedTerms. We will store notes in termObj.note = "..."
+
     const categoryNames = {
         'dl': 'Deep Learning (DL)',
         'ml': 'Machine Learning (ML)',
@@ -25,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveProgress() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(savedProgress));
         updateOverallProgress();
+        if(typeof applyFilters !== 'undefined') applyFilters();
     }
 
     function saveTerms() {
@@ -100,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [catCode, kps] of Object.entries(kpData)) {
             const card = document.createElement('div');
             card.className = 'category-card';
+            card.setAttribute('data-catcode', catCode);
             card.style.animationDelay = `${delay}s`;
             delay += 0.1;
             
@@ -108,7 +143,41 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const title = document.createElement('h2');
             title.className = 'category-title';
-            title.textContent = categoryNames[catCode] || catCode.toUpperCase();
+            title.textContent = getDisplayName(catCode, categoryNames[catCode] || catCode.toUpperCase());
+            title.style.cursor = 'text';
+            title.title = '双击重命名分类';
+            
+            title.ondblclick = (e) => {
+                e.stopPropagation();
+                const currentText = title.textContent;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentText;
+                input.style.fontSize = '1.6rem';
+                input.style.fontWeight = '700';
+                input.style.border = '1px solid var(--accent)';
+                input.style.background = 'white';
+                input.style.borderRadius = '8px';
+                input.style.padding = '2px 8px';
+                input.style.width = '100%';
+                
+                const saveName = () => {
+                    const newName = input.value.trim();
+                    if(newName && newName !== currentText) {
+                        customNames[catCode] = newName;
+                        saveCustomNames();
+                    }
+                    title.textContent = getDisplayName(catCode, categoryNames[catCode] || catCode.toUpperCase());
+                    header.replaceChild(title, input);
+                    
+                };
+                
+                input.onblur = saveName;
+                input.onkeydown = (evt) => { if(evt.key === 'Enter') input.blur(); };
+                
+                header.replaceChild(input, title);
+                input.focus();
+            };
             
             const stats = document.createElement('div');
             stats.className = 'category-stats';
@@ -128,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isChecked = !!savedProgress[key];
                 
                 li.className = `kp-item ${isChecked ? 'checked' : ''}`;
+                li.setAttribute('data-kpkey', key);
                 
                 const headerDiv = document.createElement('div');
                 headerDiv.className = 'kp-item-header';
@@ -147,11 +217,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const label = document.createElement('span');
                 label.className = 'kp-label';
-                label.textContent = formatName(kp);
-                label.title = formatName(kp);
+                const defaultKpName = formatName(kp);
+                label.textContent = getDisplayName(key, defaultKpName);
+                label.title = '双击重命名知识点';
+                
+                label.ondblclick = (e) => {
+                    e.stopPropagation();
+                    const currentText = label.textContent;
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = currentText;
+                    input.style.fontSize = '1rem';
+                    input.style.fontWeight = '500';
+                    input.style.border = '1px solid var(--accent)';
+                    input.style.borderRadius = '4px';
+                    input.style.padding = '0 4px';
+                    
+                    const saveKpName = () => {
+                        const newName = input.value.trim();
+                        if(newName && newName !== currentText) {
+                            customNames[key] = newName;
+                            saveCustomNames();
+                        }
+                        label.textContent = getDisplayName(key, defaultKpName);
+                        headerDiv.replaceChild(label, input);
+                        
+                    };
+                    
+                    input.onblur = saveKpName;
+                    input.onkeydown = (evt) => { if(evt.key === 'Enter') input.blur(); };
+                    
+                    headerDiv.replaceChild(input, label);
+                    input.focus();
+                };
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'kp-actions';
+                
+                const qaBtn = document.createElement('button');
+                qaBtn.className = 'icon-btn';
+                qaBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+                qaBtn.title = '问答笔记';
+                qaBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openQAModal(key, formatName(kp));
+                };
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'icon-btn delete-kp';
+                delBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+                delBtn.title = '删除此知识点';
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if(confirm('确定删除此知识点？')) {
+                        // remove from custom
+                        if(customKPData[catCode]) {
+                            customKPData[catCode] = customKPData[catCode].filter(x => x !== kp);
+                            saveCustomKPs();
+                        }
+                        // remove from runtime data
+                        kpData[catCode] = kpData[catCode].filter(x => x !== kp);
+                        delete savedProgress[key];
+                        saveProgress();
+                        // re-render UI completely
+                        container.innerHTML = '';
+                        createUI();
+                    }
+                };
+                
+                actionsDiv.appendChild(qaBtn);
+                actionsDiv.appendChild(delBtn);
                 
                 headerDiv.appendChild(cbWrapper);
                 headerDiv.appendChild(label);
+                headerDiv.appendChild(actionsDiv);
                 
                 li.appendChild(headerDiv);
                 
@@ -182,6 +321,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         actions.style.alignItems = 'center';
                         actions.style.gap = '2px';
 
+                        const noteBtn = document.createElement('span');
+                        noteBtn.className = 'action-btn note-btn';
+                        noteBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
+                        noteBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            openNoteModal(termObj, key);
+                        };
+
                         const addBtn = document.createElement('span');
                         addBtn.className = 'action-btn add-sub-btn';
                         addBtn.textContent = '+';
@@ -190,6 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         delBtn.className = 'action-btn remove-btn';
                         delBtn.textContent = '✕';
 
+                        actions.appendChild(noteBtn);
                         actions.appendChild(addBtn);
                         actions.appendChild(delBtn);
 
@@ -367,10 +515,36 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             card.appendChild(list);
+                        const footer = document.createElement('div');
+            footer.className = 'category-footer';
+            const addKpBtn = document.createElement('button');
+            addKpBtn.className = 'add-term-btn';
+            addKpBtn.style.width = '30px';
+            addKpBtn.style.height = '30px';
+            addKpBtn.style.fontSize = '1.2rem';
+            addKpBtn.textContent = '+';
+            addKpBtn.onclick = () => {
+                const kpName = prompt('输入新的知识点名称 (英文或小写横线分隔):');
+                if(kpName && kpName.trim() !== '') {
+                    const formatted = kpName.trim().replace(/\s+/g, '_').toLowerCase();
+                    if(!customKPData[catCode]) customKPData[catCode] = [];
+                    if(!customKPData[catCode].includes(formatted) && !kpData[catCode].includes(formatted)) {
+                        customKPData[catCode].push(formatted);
+                        kpData[catCode].push(formatted);
+                        saveCustomKPs();
+                        container.innerHTML = '';
+                        createUI();
+                    }
+                }
+            };
+            footer.appendChild(addKpBtn);
+            card.appendChild(footer);
+
             container.appendChild(card);
         }
         
         updateOverallProgress();
+        if(typeof applyFilters !== 'undefined') applyFilters();
     }
 
     // Graph Logic
@@ -402,6 +576,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const kpChildrenMap = {}; // kpId -> Set of child termIds
         const kpRoots = [];
 
+                // Pre-set 12 nice distinct colors
+        const presetHues = [
+            0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330
+        ];
+        
+        function getAlphaColor(h, s, l, a) {
+            return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+        }
+        
+        const kpRootBaseHues = {};
+        
+        function getHslStyle(rootSourceId, depth, isChecked) {
+            const h = kpRootBaseHues[rootSourceId] || 0;
+            const s = isChecked ? 65 : 45;
+            const l = isChecked ? 45 : 65;
+            
+            let alpha = 1.0;
+            if(depth === 0) {
+                alpha = isChecked ? 1.0 : 0.7;
+            } else {
+                alpha = Math.max(0.1, 0.5 - ((depth - 1) * 0.1));
+            }
+            
+            const textColor = l < 50 && alpha > 0.4 ? '#ffffff' : '#111111';
+            const bgColor = getAlphaColor(h, s, l, alpha);
+            const borderColor = getAlphaColor(h, s, l - 10, alpha + 0.2); 
+            
+            return { bg: bgColor, text: textColor, border: borderColor, hue: h };
+        }
+
         // Process data
         for (const [catCode, kps] of Object.entries(kpData)) {
             kps.forEach(kp => {
@@ -411,21 +615,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (termsTree.length > 0) {
                     const kpNodeId = key;
                     kpRoots.push(kpNodeId);
+                    kpRootBaseHues[kpNodeId] = presetHues[(kpRoots.length - 1) % presetHues.length];
                     if (!kpChildrenMap[kpNodeId]) kpChildrenMap[kpNodeId] = new Set();
                     
                     const isChecked = !!savedProgress[kpNodeId];
-                    const kpColor = isChecked 
-                        ? (catCode === 'dl' ? '#15803d' : (catCode === 'ml' ? '#16a34a' : '#22c55e'))
-                        : (catCode === 'dl' ? '#1d4ed8' : (catCode === 'ml' ? '#2563eb' : '#3b82f6'));
-                        
                     if (!baseNodesMap.has(kpNodeId)) {
-                        const kpName = formatName(kp);
+                        const kpName = getDisplayName(kpNodeId, formatName(kp));
                         const [w, h] = getTextBoundingSize(kpName, 13, 14, 8);
                         baseNodesMap.set(kpNodeId, {
                             id: kpNodeId,
                             name: kpName,
                             symbolSize: [w, h],
-                            baseStyle: { bg: kpColor, text: '#ffffff', border: kpColor }
+                            baseStyle: getHslStyle(kpNodeId, 0, !!savedProgress[kpNodeId])
                         });
                     }
 
@@ -463,39 +664,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const palettes = {
-            green: { 
-                1: { bg: '#86efac', text: '#14532d', border: '#4ade80' },
-                2: { bg: '#bbf7d0', text: '#166534', border: '#86efac' },
-                3: { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
-                4: { bg: '#f0fdf4', text: '#166534', border: '#dcfce7' }
-            },
-            blue: { 
-                1: { bg: '#93c5fd', text: '#1e3a8a', border: '#60a5fa' },
-                2: { bg: '#bfdbfe', text: '#1e40af', border: '#93c5fd' },
-                3: { bg: '#dbeafe', text: '#1e40af', border: '#bfdbfe' },
-                4: { bg: '#eff6ff', text: '#1e40af', border: '#dbeafe' }
-            },
-            red: { 
-                1: { bg: '#fca5a5', text: '#7f1d1d', border: '#f87171' },
-                2: { bg: '#fecaca', text: '#991b1b', border: '#fca5a5' },
-                3: { bg: '#fee2e2', text: '#991b1b', border: '#fecaca' },
-                4: { bg: '#fef2f2', text: '#991b1b', border: '#fee2e2' }
-            }
-        };
 
-        // Add Term Nodes and Edges
+                // Add Term Nodes and Edges
         for (const [termId, data] of Object.entries(termMap)) {
             const depth = Math.min(data.depth, 4);
             
-            let theme = 'red';
-            if (data.rootSources.size === 1) {
-                const singleRootKP = Array.from(data.rootSources)[0];
-                const isChecked = !!savedProgress[singleRootKP];
-                theme = isChecked ? 'green' : 'blue';
+            let primaryRootId = null;
+            if (data.rootSources.size > 0) {
+                primaryRootId = Array.from(data.rootSources)[0];
             }
             
-            const style = palettes[theme][depth] || palettes[theme][4];
+            let style = null;
+            if (primaryRootId) {
+                const isChecked = !!savedProgress[primaryRootId];
+                style = getHslStyle(primaryRootId, depth, isChecked);
+            } else {
+                style = { bg: '#fca5a5', text: '#7f1d1d', border: '#f87171', hue: 0 }; // Fallback red
+            }
+            
             const [w, h] = getTextBoundingSize(data.name, 11, 10, 5);
             
             baseNodesMap.set(termId, {
@@ -506,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             data.parents.forEach(pId => {
-                allEdges.push({ source: pId, target: termId, theme: theme });
+                allEdges.push({ source: pId, target: termId, hue: style.hue });
             });
         }
 
@@ -585,15 +771,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         allEdges.forEach(edge => {
             if (activeNodes.has(edge.source) && activeNodes.has(edge.target)) {
-                let edgeColor = '#86efac';
-                if (edge.theme === 'blue') edgeColor = '#93c5fd';
-                else if (edge.theme === 'red') edgeColor = '#fca5a5';
-                
                 edges.push({
                     source: edge.source,
                     target: edge.target,
                     lineStyle: {
-                        color: edgeColor
+                        color: `hsla(${edge.hue || 0}, 50%, 60%, 0.4)`
                     }
                 });
             }
@@ -676,5 +858,184 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    
+    // Modal Logistics
+    const noteModal = document.getElementById('note-modal');
+    const closeNoteBtn = document.getElementById('close-note-btn');
+    const noteTextarea = document.getElementById('note-textarea');
+    const previewNoteBtn = document.getElementById('preview-note-btn');
+    const notePreviewArea = document.getElementById('note-preview-area');
+    const saveNoteBtn = document.getElementById('save-note-btn');
+    
+    let currentNoteTerm = null;
+    let currentNoteKey = null;
+
+    function openNoteModal(termObj, kpKey) {
+        currentNoteTerm = termObj;
+        currentNoteKey = kpKey;
+        noteTextarea.value = termObj.note || '';
+        notePreviewArea.innerHTML = termObj.note ? formatTextWithMath(termObj.note) : '';
+        document.getElementById('note-modal-title').textContent = `编辑笔记: ${termObj.name}`;
+        noteModal.classList.remove('hidden');
+        if (window.MathJax) {
+            MathJax.typesetPromise([notePreviewArea]).catch((err) => console.log(err));
+        }
+    }
+
+    closeNoteBtn.onclick = () => noteModal.classList.add('hidden');
+    saveNoteBtn.onclick = () => {
+        if(currentNoteTerm) {
+            currentNoteTerm.note = noteTextarea.value;
+            saveTerms();
+            noteModal.classList.add('hidden');
+        }
+    };
+    previewNoteBtn.onclick = () => {
+        notePreviewArea.innerHTML = formatTextWithMath(noteTextarea.value);
+        if (window.MathJax) {
+            MathJax.typesetPromise([notePreviewArea]).catch((err) => console.log(err));
+        }
+    };
+
+    const qaModal = document.getElementById('qa-modal');
+    const closeQaBtn = document.getElementById('close-qa-btn');
+    const qaList = document.getElementById('qa-list');
+    const qaQuestion = document.getElementById('qa-question');
+    const qaAnswer = document.getElementById('qa-answer');
+    const saveQaBtn = document.getElementById('save-qa-btn');
+    const previewQaBtn = document.getElementById('preview-qa-btn');
+    const qaPreviewArea = document.getElementById('qa-preview-area');
+    
+    let currentQAKpKey = null;
+
+    function formatTextWithMath(text) {
+        return text.replace(/\n/g, '<br>');
+    }
+
+    function renderQAList() {
+        qaList.innerHTML = '';
+        const list = savedQA[currentQAKpKey] || [];
+        if(list.length === 0) {
+            qaList.innerHTML = '<p style="color:#888;text-align:center;">暂无问答笔记</p>';
+            return;
+        }
+        list.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'qa-item';
+            div.innerHTML = `
+                <h4>Q: ${formatTextWithMath(item.q)}</h4>
+                <div class="qa-ans">A: ${formatTextWithMath(item.a)}</div>
+                <button class="glass-btn-small" style="margin-top:0.5rem;color:red;" onclick="deleteQA('${currentQAKpKey}', ${idx})">删除</button>
+            `;
+            qaList.appendChild(div);
+        });
+        if (window.MathJax) {
+            MathJax.typesetPromise([qaList]).catch((err) => console.log(err));
+        }
+    }
+
+    window.deleteQA = function(kpKey, idx) {
+        if(confirm("删除此问答?")) {
+            savedQA[kpKey].splice(idx, 1);
+            saveQA();
+            renderQAList();
+        }
+    }
+
+    function openQAModal(kpKey, kpName) {
+        currentQAKpKey = kpKey;
+        document.getElementById('qa-modal-title').textContent = `问答笔记: ${kpName}`;
+        renderQAList();
+        qaQuestion.value = '';
+        qaAnswer.value = '';
+        qaPreviewArea.innerHTML = '';
+        qaModal.classList.remove('hidden');
+    }
+
+    closeQaBtn.onclick = () => qaModal.classList.add('hidden');
+    saveQaBtn.onclick = () => {
+        const q = qaQuestion.value.trim();
+        const a = qaAnswer.value.trim();
+        if(q && a) {
+            if(!savedQA[currentQAKpKey]) savedQA[currentQAKpKey] = [];
+            savedQA[currentQAKpKey].push({ q, a });
+            saveQA();
+            qaQuestion.value = '';
+            qaAnswer.value = '';
+            renderQAList();
+        } else {
+            alert('问题和答案均不能为空');
+        }
+    };
+    
+    previewQaBtn.onclick = () => {
+        qaPreviewArea.innerHTML = `<b>Q:</b> ${formatTextWithMath(qaQuestion.value)}<br><div style="margin-top:8px;"><b>A:</b> ${formatTextWithMath(qaAnswer.value)}</div>`;
+        if (window.MathJax) {
+            MathJax.typesetPromise([qaPreviewArea]).catch((err) => console.log(err));
+        }
+    };
+
+    // Toolbar Logic
+    const searchInput = document.getElementById('search-input');
+    const toggleCollapseBtn = document.getElementById('toggle-collapse-btn');
+    let isCollapsed = false;
+
+    function applyFilters() {
+        const query = searchInput.value.toLowerCase();
+        
+        // Show/Hide category cards and kp items
+        const cards = document.querySelectorAll('.category-card');
+        
+        const kpsInDom = document.querySelectorAll('.kp-item');
+        kpsInDom.forEach(kpNode => {
+            const labelText = kpNode.querySelector('.kp-label').textContent.toLowerCase();
+            let showBySearch = labelText.includes(query);
+            
+            if(showBySearch) {
+                kpNode.style.display = 'flex';
+            } else {
+                kpNode.style.display = 'none';
+            }
+        });
+        
+        // Hide empty category cards
+        cards.forEach(card => {
+             let hasVisibleChild = Array.from(card.querySelectorAll('.kp-item')).some(k => k.style.display !== 'none');
+             card.style.display = hasVisibleChild ? 'block' : 'none';
+        });
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+
+    toggleCollapseBtn.onclick = () => {
+        isCollapsed = !isCollapsed;
+        toggleCollapseBtn.textContent = isCollapsed ? '全部展开' : '全部折叠';
+        
+        const trees = document.querySelectorAll('.term-tags-container');
+        trees.forEach(t => {
+            if(isCollapsed) t.classList.add('hidden');
+            else t.classList.remove('hidden');
+        });
+    };
+    const graphExpandAllBtn = document.getElementById('graph-expand-all');
+    const graphCollapseAllBtn = document.getElementById('graph-collapse-all');
+    if(graphExpandAllBtn) graphExpandAllBtn.onclick = () => {
+        collapsedNodes.clear();
+        if(!graphModal.classList.contains('hidden')) renderGraph();
+    };
+    if(graphCollapseAllBtn) graphCollapseAllBtn.onclick = () => {
+        // Collect all kpRoot Ids since they are the ones we collapse
+        const kpRootsInDom = document.querySelectorAll('.category-card');
+        kpRootsInDom.forEach(card => {
+            const catCode = card.getAttribute('data-catcode');
+            const kpsNodes = card.querySelectorAll('.kp-item');
+            kpsNodes.forEach(kn => {
+                const kpKey = kn.getAttribute('data-kpkey');
+                if(kpKey) collapsedNodes.add(kpKey);
+            });
+        });
+        if(!graphModal.classList.contains('hidden')) renderGraph();
+    };
+    
     createUI();
 });
