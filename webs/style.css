@@ -21,12 +21,13 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-main);
-    line-height: 1.47;
+    line-height: 1.55; /* Increased for better legibility */
     min-height: 100vh;
-    padding: 3rem 2rem;
+    padding: 4rem 2rem; /* Increased padding */
     position: relative;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    font-size: 17px; /* Slightly larger base font */
 }
 
 /* Apple-style Dynamic Background */
@@ -213,6 +214,7 @@ main {
 
 .kp-item:hover {
     background: rgba(0, 0, 0, 0.04);
+    transform: translateX(4px); /* Subtle interaction */
 }
 
 .kp-item.checked {
@@ -280,8 +282,8 @@ main {
 }
 
 .kp-label {
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 1.05rem; /* Increased size */
+    font-weight: 600; /* Bolder weight */
     color: var(--text-main);
     transition: var(--transition);
     flex-grow: 1;
@@ -293,12 +295,12 @@ main {
 
 /* Tree and Term Hierarchy Feature */
 .term-tags-container {
-    margin-top: 0.75rem;
+    margin-top: 1rem;
     width: 100%;
-    padding-left: 36px; /* Align with text */
+    padding-left: 42px; /* Adjusted to align with larger checkbox/text */
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .term-tree-root {
@@ -602,9 +604,15 @@ main {
 }
 
 /* Modals */
-.modal-content.qa-modal-content {
+.modal-content.qa-modal-content, .modal-content.qa-editor-content {
     width: 80vw;
     height: 85vh;
+    max-width: 900px; /* Cap size on desktop */
+}
+
+.qa-editor-content {
+    height: 75vh;
+    z-index: 1100; /* Ensure it stays above main modal */
 }
 
 .note-modal-body, .qa-modal-content .modal-body {
@@ -687,6 +695,49 @@ textarea:focus {
     padding: 1.5rem;
     border-radius: 12px;
     border: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    transition: var(--transition);
+}
+
+.qa-item:hover {
+    background: #f5f5f7;
+    border-color: #d2d2d7;
+}
+
+.qa-item-content {
+    flex: 1;
+}
+
+.qa-item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.qa-sort-btns {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.sort-btn {
+    opacity: 0.3;
+    padding: 4px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 4px;
+}
+
+.qa-item:hover .sort-btn {
+    opacity: 0.7;
+}
+
+.sort-btn:hover {
+    opacity: 1 !important;
+    background: rgba(0,0,0,0.08);
 }
 
 .qa-item h4 {
@@ -711,21 +762,69 @@ textarea:focus {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1rem;
-    opacity: 0.5;
+    font-size: 1.25rem; /* Enlarge icon size */
+    opacity: 0.45;
     transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px; /* Larger hit area */
+    border-radius: 8px;
 }
 
 .icon-btn:hover {
     opacity: 1;
+    background: rgba(0,0,0,0.05);
+}
+
+.icon-btn svg {
+    width: 18px;  /* Explicitly larger SVG */
+    height: 18px;
 }
 
 .icon-btn.delete-kp {
     color: #ff3b30;
 }
 
+.icon-btn.delete-kp:hover {
+    background: rgba(255, 59, 48, 0.08);
+}
+
 .category-footer {
     margin-top: 1rem;
     display: flex;
     justify-content: center;
+}
+
+/* Adaptive Tooltip */
+.term-tooltip {
+    position: fixed;
+    z-index: 2000;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    max-width: 320px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    word-wrap: break-word;
+}
+
+.term-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.term-tooltip br {
+    display: block;
+    content: "";
+    margin-top: 0.4rem;
 }

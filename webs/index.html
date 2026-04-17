@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,12 +15,13 @@
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
+
 <body>
     <div class="background-effects">
         <div class="glow-orb orb-1"></div>
         <div class="glow-orb orb-2"></div>
     </div>
-    
+
     <div class="app-container">
         <header>
             <div class="header-content">
@@ -44,7 +46,7 @@
 
         <div class="toolbar">
             <input type="text" id="search-input" placeholder="搜索知识点或词条..." />
-            
+
             <button id="toggle-collapse-btn" class="glass-btn">全部展开</button>
         </div>
 
@@ -70,7 +72,7 @@
         </div>
     </div>
 
-    
+
     <!-- Term Note Modal -->
     <div id="note-modal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -80,7 +82,7 @@
             </div>
             <div class="modal-body note-modal-body">
                 <textarea id="note-textarea" placeholder="输入笔记内容，支持公式如 $E=mc^2$ ..."></textarea>
-                <div class="preview-header">预览 (支持公式): <button id="preview-note-btn" class="glass-btn-small">渲染</button></div>
+                <div class="preview-header">预览 (实时渲染):</div>
                 <div id="note-preview-area" class="preview-area"></div>
             </div>
             <div class="modal-footer">
@@ -98,13 +100,25 @@
             </div>
             <div class="modal-body">
                 <div id="qa-list" class="qa-list"></div>
-                <div class="add-qa-section">
-                    <h3>添加新问答</h3>
-                    <textarea id="qa-question" placeholder="输入问题 (支持公式...)"></textarea>
-                    <textarea id="qa-answer" placeholder="输入参考答案 (支持公式...)"></textarea>
-                    <div class="preview-header">预览 <button id="preview-qa-btn" class="glass-btn-small">渲染</button></div>
-                    <div id="qa-preview-area" class="preview-area"></div>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="add-qa-btn" class="glass-btn primary-btn">添加新问答</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QA Editor Modal (Nested/Secondary) -->
+    <div id="qa-editor-modal" class="modal-overlay hidden">
+        <div class="modal-content qa-editor-content">
+            <div class="modal-header">
+                <h2 id="qa-editor-title">编辑问答</h2>
+                <button id="close-qa-editor-btn" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="qa-question" placeholder="输入问题 (支持公式...)"></textarea>
+                <textarea id="qa-answer" placeholder="输入参考答案 (支持公式...)"></textarea>
+                <div class="preview-header">预览 (实时渲染):</div>
+                <div id="qa-preview-area" class="preview-area"></div>
             </div>
             <div class="modal-footer">
                 <button id="save-qa-btn" class="glass-btn primary-btn">保存问答</button>
@@ -115,4 +129,5 @@
     <script src="data.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>

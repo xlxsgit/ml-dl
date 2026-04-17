@@ -3,6 +3,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const overallFill = document.getElementById('overall-fill');
     const overallPercent = document.getElementById('overall-percent');
     
+    // Utility for text formatting
+    function formatTextWithMath(text) {
+        if (!text) return '';
+        return text.replace(/\n/g, '<br>');
+    }
+
+    // Tooltip initialization
+    const tooltip = document.createElement('div');
+    tooltip.className = 'term-tooltip';
+    document.body.appendChild(tooltip);
+
+    function showTooltip(content, x, y) {
+        if (!content || content.trim() === '') return;
+        tooltip.innerHTML = formatTextWithMath(content);
+        tooltip.classList.add('visible');
+        updateTooltipPosition(x, y);
+        if (window.MathJax) {
+            MathJax.typesetPromise([tooltip]).catch((err) => console.log(err));
+        }
+    }
+
+    function hideTooltip() {
+        tooltip.classList.remove('visible');
+    }
+
+    function updateTooltipPosition(x, y) {
+        const offset = 15;
+        let left = x + offset;
+        let top = y + offset;
+
+        // Adaptive boundary check
+        const rect = tooltip.getBoundingClientRect();
+        if (left + rect.width > window.innerWidth - 20) {
+            left = x - rect.width - offset;
+        }
+        if (top + rect.height > window.innerHeight - 20) {
+            top = y - rect.height - offset;
+        }
+        
+        // Ensure not off left or top
+        left = Math.max(10, left);
+        top = Math.max(10, top);
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+    }
+    
     const STORAGE_KEY = 'ml_dl_kp_progress';
     let savedProgress = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     
@@ -35,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function getDisplayName(key, defaultName) {
         return customNames[key] || defaultName;
     }
+
+    let currentEditQaIdx = -1; // To track editing index in QA list
 
     const QA_STORAGE_KEY = 'ml_dl_kp_qa';
     let savedQA = JSON.parse(localStorage.getItem(QA_STORAGE_KEY) || '{}');
@@ -260,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 qaBtn.title = '问答笔记';
                 qaBtn.onclick = (e) => {
                     e.stopPropagation();
-                    openQAModal(key, formatName(kp));
+                    openQAModal(key, getDisplayName(key, formatName(kp)));
                 };
                 
                 const delBtn = document.createElement('button');
@@ -345,6 +394,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         tag.appendChild(actions);
                         row.appendChild(tag);
                         wrapper.appendChild(row);
+
+                        // Tooltip events
+                        tag.addEventListener('mouseenter', (e) => {
+                            if (termObj.note) {
+                                showTooltip(termObj.note, e.clientX, e.clientY);
+                            }
+                        });
+                        tag.addEventListener('mousemove', (e) => {
+                            if (termObj.note) {
+                                updateTooltipPosition(e.clientX, e.clientY);
+                            }
+                        });
+                        tag.addEventListener('mouseleave', hideTooltip);
 
                         const childrenContainer = document.createElement('div');
                         childrenContainer.className = 'term-children';
@@ -633,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Process tree
                     function traverseTerms(treeArray, parentId, currentDepth, rootNodeId) {
                         treeArray.forEach(termObj => {
-                            const termId = `term_${termObj.name}`;
+                            const termId = `${rootNodeId}_term_${termObj.name}`;
                             if (!termMap[termId]) {
                                 termMap[termId] = {
                                     name: termObj.name,
@@ -648,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             termMap[termId].parents.add(parentId);
                             termMap[termId].rootSources.add(rootNodeId);
 
-                            if (parentId.startsWith('term_')) {
+                            if (parentId.includes('_term_')) {
                                 if (termMap[parentId]) termMap[parentId].children.add(termId);
                             } else {
                                 kpChildrenMap[parentId].add(termId);
@@ -722,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         baseNodesMap.forEach((data, id) => {
             if (!activeNodes.has(id)) return;
-            const isTermNode = id.startsWith('term_');
+            const isTermNode = id.includes('_term_');
             
             // Collapsed visual cue
             const isCollapsed = collapsedNodes.has(id);
@@ -795,8 +857,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 edgeSymbol: ['none', 'none'],
                 force: {
-                    repulsion: 400,
-                    gravity: 0.15,
+                    repulsion: 800,
+                    gravity: 0.1,
                     edgeLength: [80, 150]
                 },
                 data: nodes,
@@ -859,16 +921,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     
-    // Modal Logistics
+
+    // --- Modal Management ---
     const noteModal = document.getElementById('note-modal');
-    const closeNoteBtn = document.getElementById('close-note-btn');
+    const qaModal = document.getElementById('qa-modal');
+    const qaEditorModal = document.getElementById('qa-editor-modal');
+    
+    // Note Elements
     const noteTextarea = document.getElementById('note-textarea');
-    const previewNoteBtn = document.getElementById('preview-note-btn');
     const notePreviewArea = document.getElementById('note-preview-area');
     const saveNoteBtn = document.getElementById('save-note-btn');
+    const closeNoteBtn = document.getElementById('close-note-btn');
     
+    // QA Elements
+    const qaList = document.getElementById('qa-list');
+    const addQaBtn = document.getElementById('add-qa-btn');
+    const saveQaBtn = document.getElementById('save-qa-btn');
+    const closeQaBtn = document.getElementById('close-qa-btn');
+    const closeQaEditorBtn = document.getElementById('close-qa-editor-btn');
+    
+    const qaQuestion = document.getElementById('qa-question');
+    const qaAnswer = document.getElementById('qa-answer');
+    const qaPreviewArea = document.getElementById('qa-preview-area');
+    const qaEditorTitle = document.getElementById('qa-editor-title');
+
     let currentNoteTerm = null;
     let currentNoteKey = null;
+    let currentQAKpKey = null;
 
     function openNoteModal(termObj, kpKey) {
         currentNoteTerm = termObj;
@@ -890,42 +969,34 @@ document.addEventListener('DOMContentLoaded', () => {
             noteModal.classList.add('hidden');
         }
     };
-    previewNoteBtn.onclick = () => {
-        notePreviewArea.innerHTML = formatTextWithMath(noteTextarea.value);
-        if (window.MathJax) {
-            MathJax.typesetPromise([notePreviewArea]).catch((err) => console.log(err));
-        }
-    };
-
-    const qaModal = document.getElementById('qa-modal');
-    const closeQaBtn = document.getElementById('close-qa-btn');
-    const qaList = document.getElementById('qa-list');
-    const qaQuestion = document.getElementById('qa-question');
-    const qaAnswer = document.getElementById('qa-answer');
-    const saveQaBtn = document.getElementById('save-qa-btn');
-    const previewQaBtn = document.getElementById('preview-qa-btn');
-    const qaPreviewArea = document.getElementById('qa-preview-area');
-    
-    let currentQAKpKey = null;
-
-    function formatTextWithMath(text) {
-        return text.replace(/\n/g, '<br>');
-    }
 
     function renderQAList() {
         qaList.innerHTML = '';
         const list = savedQA[currentQAKpKey] || [];
         if(list.length === 0) {
-            qaList.innerHTML = '<p style="color:#888;text-align:center;">暂无问答笔记</p>';
+            qaList.innerHTML = '<p style="color:#888;text-align:center;padding: 2rem;">暂无问答笔记</p>';
             return;
         }
         list.forEach((item, idx) => {
             const div = document.createElement('div');
             div.className = 'qa-item';
             div.innerHTML = `
-                <h4>Q: ${formatTextWithMath(item.q)}</h4>
-                <div class="qa-ans">A: ${formatTextWithMath(item.a)}</div>
-                <button class="glass-btn-small" style="margin-top:0.5rem;color:red;" onclick="deleteQA('${currentQAKpKey}', ${idx})">删除</button>
+                <div class="qa-item-content">
+                    <h4>Q: ${formatTextWithMath(item.q)}</h4>
+                    <div class="qa-ans">A: ${formatTextWithMath(item.a)}</div>
+                </div>
+                <div class="qa-item-actions">
+                    <div class="qa-sort-btns">
+                        <button class="icon-btn sort-btn" onclick="moveQA(${idx}, -1)" title="上移">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                        <button class="icon-btn sort-btn" onclick="moveQA(${idx}, 1)" title="下移">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    <button class="glass-btn-small" onclick="editQA(${idx})">编辑</button>
+                    <button class="glass-btn-small" style="color:#ff3b30;" onclick="deleteQA('${currentQAKpKey}', ${idx})">删除</button>
+                </div>
             `;
             qaList.appendChild(div);
         });
@@ -933,6 +1004,40 @@ document.addEventListener('DOMContentLoaded', () => {
             MathJax.typesetPromise([qaList]).catch((err) => console.log(err));
         }
     }
+
+    function openQAEditor(idx = -1) {
+        currentEditQaIdx = idx;
+        if(idx > -1) {
+            const item = savedQA[currentQAKpKey][idx];
+            qaQuestion.value = item.q;
+            qaAnswer.value = item.a;
+            qaEditorTitle.textContent = '修改问答';
+            saveQaBtn.textContent = '更新问答';
+        } else {
+            qaQuestion.value = '';
+            qaAnswer.value = '';
+            qaEditorTitle.textContent = '添加新问答';
+            saveQaBtn.textContent = '保存问答';
+        }
+        updateQAPreview();
+        qaEditorModal.classList.remove('hidden');
+    }
+
+    window.editQA = (idx) => openQAEditor(idx);
+    addQaBtn.onclick = () => openQAEditor(-1);
+    closeQaEditorBtn.onclick = () => qaEditorModal.classList.add('hidden');
+
+    window.moveQA = function(idx, direction) {
+        const list = savedQA[currentQAKpKey];
+        const newIdx = idx + direction;
+        if(newIdx >= 0 && newIdx < list.length) {
+            const temp = list[idx];
+            list[idx] = list[newIdx];
+            list[newIdx] = temp;
+            saveQA();
+            renderQAList();
+        }
+    };
 
     window.deleteQA = function(kpKey, idx) {
         if(confirm("删除此问答?")) {
@@ -944,11 +1049,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openQAModal(kpKey, kpName) {
         currentQAKpKey = kpKey;
+        currentEditQaIdx = -1;
         document.getElementById('qa-modal-title').textContent = `问答笔记: ${kpName}`;
         renderQAList();
-        qaQuestion.value = '';
-        qaAnswer.value = '';
-        qaPreviewArea.innerHTML = '';
         qaModal.classList.remove('hidden');
     }
 
@@ -958,22 +1061,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const a = qaAnswer.value.trim();
         if(q && a) {
             if(!savedQA[currentQAKpKey]) savedQA[currentQAKpKey] = [];
-            savedQA[currentQAKpKey].push({ q, a });
+            
+            if(currentEditQaIdx > -1) {
+                savedQA[currentQAKpKey][currentEditQaIdx] = { q, a };
+                currentEditQaIdx = -1;
+            } else {
+                savedQA[currentQAKpKey].push({ q, a });
+            }
+            
             saveQA();
-            qaQuestion.value = '';
-            qaAnswer.value = '';
+            qaEditorModal.classList.add('hidden');
             renderQAList();
         } else {
             alert('问题和答案均不能为空');
         }
     };
     
-    previewQaBtn.onclick = () => {
-        qaPreviewArea.innerHTML = `<b>Q:</b> ${formatTextWithMath(qaQuestion.value)}<br><div style="margin-top:8px;"><b>A:</b> ${formatTextWithMath(qaAnswer.value)}</div>`;
-        if (window.MathJax) {
-            MathJax.typesetPromise([qaPreviewArea]).catch((err) => console.log(err));
+    // Real-time Preview Logic
+    let qaTypesetTimeout = null;
+    function updateQAPreview() {
+        const q = qaQuestion.value;
+        const a = qaAnswer.value;
+        if(!q && !a) {
+            qaPreviewArea.innerHTML = '';
+            return;
         }
-    };
+        qaPreviewArea.innerHTML = `<b>Q:</b> ${formatTextWithMath(q)}<br><div style="margin-top:12px;"><b>A:</b> ${formatTextWithMath(a)}</div>`;
+        
+        if (window.MathJax) {
+            if (qaTypesetTimeout) clearTimeout(qaTypesetTimeout);
+            qaTypesetTimeout = setTimeout(() => {
+                MathJax.typesetPromise([qaPreviewArea]).catch((err) => console.log(err));
+            }, 600); // 600ms debounce
+        }
+    }
+
+    qaQuestion.addEventListener('input', updateQAPreview);
+    qaAnswer.addEventListener('input', updateQAPreview);
+
+    // Note preview also live
+    let noteTypesetTimeout = null;
+    function updateNotePreview() {
+        const content = noteTextarea.value;
+        notePreviewArea.innerHTML = formatTextWithMath(content);
+        if (window.MathJax) {
+            if (noteTypesetTimeout) clearTimeout(noteTypesetTimeout);
+            noteTypesetTimeout = setTimeout(() => {
+                MathJax.typesetPromise([notePreviewArea]).catch((err) => console.log(err));
+            }, 600);
+        }
+    }
+    if (noteTextarea) {
+        noteTextarea.addEventListener('input', updateNotePreview);
+    }
 
     // Toolbar Logic
     const searchInput = document.getElementById('search-input');
@@ -1024,16 +1164,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!graphModal.classList.contains('hidden')) renderGraph();
     };
     if(graphCollapseAllBtn) graphCollapseAllBtn.onclick = () => {
-        // Collect all kpRoot Ids since they are the ones we collapse
-        const kpRootsInDom = document.querySelectorAll('.category-card');
-        kpRootsInDom.forEach(card => {
-            const catCode = card.getAttribute('data-catcode');
-            const kpsNodes = card.querySelectorAll('.kp-item');
-            kpsNodes.forEach(kn => {
-                const kpKey = kn.getAttribute('data-kpkey');
-                if(kpKey) collapsedNodes.add(kpKey);
+        collapsedNodes.clear();
+        // Use raw kpData to ensure everything is covered, regardless of DOM filters
+        for (const [catCode, kps] of Object.entries(kpData)) {
+            kps.forEach(kp => {
+                collapsedNodes.add(`${catCode}_${kp}`);
             });
-        });
+        }
         if(!graphModal.classList.contains('hidden')) renderGraph();
     };
     
